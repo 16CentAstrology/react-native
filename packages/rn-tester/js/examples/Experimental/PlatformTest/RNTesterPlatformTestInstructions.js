@@ -5,18 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @format
- * @flow
+ * @flow strict-local
  */
-
-import * as React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
 
 import type {ViewStyleProp} from 'react-native/Libraries/StyleSheet/StyleSheet';
 
-type Props = $ReadOnly<{|
+import * as React from 'react';
+import {StyleSheet, Text, View} from 'react-native';
+
+type Props = $ReadOnly<{
   instructions?: $ReadOnlyArray<string>,
   style?: ?ViewStyleProp,
-|}>;
+}>;
 export default function RNTesterPlatformTestInstructions({
   instructions,
   style,

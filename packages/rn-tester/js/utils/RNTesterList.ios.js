@@ -10,7 +10,7 @@
 
 'use strict';
 
-import type {RNTesterModuleInfo} from '../types/RNTesterTypes';
+import type {RNTesterModule, RNTesterModuleInfo} from '../types/RNTesterTypes';
 
 import ReactNativeFeatureFlags from 'react-native/Libraries/ReactNative/ReactNativeFeatureFlags';
 
@@ -46,6 +46,11 @@ const Components: Array<RNTesterModuleInfo> = [
   {
     key: 'KeyboardAvoidingViewExample',
     module: require('../examples/KeyboardAvoidingView/KeyboardAvoidingViewExample'),
+  },
+  {
+    key: 'LayoutConformanceExample',
+    module: require('../examples/LayoutConformance/LayoutConformanceExample')
+      .default,
   },
   {
     key: 'LayoutEventsExample',
@@ -87,7 +92,11 @@ const Components: Array<RNTesterModuleInfo> = [
   },
   {
     key: 'ScrollViewIndicatorInsetsExample',
-    module: require('../examples/ScrollView/ScrollViewIndicatorInsetsExample'),
+    module: require('../examples/ScrollView/ScrollViewIndicatorInsetsIOSExample'),
+  },
+  {
+    key: 'ScrollViewKeyboardInsetsExample',
+    module: require('../examples/ScrollView/ScrollViewKeyboardInsetsIOSExample'),
   },
   {
     key: 'SectionListIndex',
@@ -128,7 +137,7 @@ const Components: Array<RNTesterModuleInfo> = [
   },
   {
     key: 'ViewExample',
-    module: require('../examples/View/ViewExample'),
+    module: require('../examples/View/ViewExample').default,
     category: 'Basic',
   },
   {
@@ -136,9 +145,18 @@ const Components: Array<RNTesterModuleInfo> = [
     category: 'UI',
     module: require('../examples/NewArchitecture/NewArchitectureExample'),
   },
+  {
+    key: 'PerformanceComparisonExample',
+    category: 'Basic',
+    module: require('../examples/Performance/PerformanceComparisonExample'),
+  },
+  {
+    key: 'OSSLibraryExample',
+    module: require('../examples/OSSLibraryExample/OSSLibraryExample'),
+  },
 ];
 
-const APIs: Array<RNTesterModuleInfo> = [
+const APIs: Array<RNTesterModuleInfo> = ([
   {
     key: 'AccessibilityExample',
     module: require('../examples/Accessibility/AccessibilityExample'),
@@ -176,7 +194,7 @@ const APIs: Array<RNTesterModuleInfo> = [
   },
   {
     key: 'BorderExample',
-    module: require('../examples/Border/BorderExample'),
+    module: require('../examples/Border/BorderExample').default,
   },
   {
     key: 'BoxShadowExample',
@@ -187,12 +205,34 @@ const APIs: Array<RNTesterModuleInfo> = [
     module: require('../examples/Crash/CrashExample'),
   },
   {
+    key: 'CursorExample',
+    module: require('../examples/Cursor/CursorExample'),
+  },
+  {
     key: 'DevSettings',
     module: require('../examples/DevSettings/DevSettingsExample'),
   },
   {
     key: 'Dimensions',
     module: require('../examples/Dimensions/DimensionsExample'),
+  },
+  {
+    key: 'DisplayContentsExample',
+    category: 'UI',
+    module: require('../examples/DisplayContents/DisplayContentsExample')
+      .default,
+  },
+  // Only show the link for the example if the API is available.
+  typeof IntersectionObserver === 'function'
+    ? {
+        key: 'IntersectionObserver',
+        category: 'UI',
+        module: require('../examples/IntersectionObserver/IntersectionObserverIndex'),
+      }
+    : null,
+  {
+    key: 'InvalidPropsExample',
+    module: require('../examples/InvalidProps/InvalidPropsExample'),
   },
   {
     key: 'Keyboard',
@@ -210,6 +250,13 @@ const APIs: Array<RNTesterModuleInfo> = [
     key: 'LinkingExample',
     module: require('../examples/Linking/LinkingExample'),
   },
+  typeof MutationObserver === 'function'
+    ? {
+        key: 'MutationObserver',
+        category: 'UI',
+        module: require('../examples/MutationObserver/MutationObserverIndex'),
+      }
+    : null,
   {
     key: 'NativeAnimationsExample',
     module: require('../examples/NativeAnimation/NativeAnimationsExample'),
@@ -225,6 +272,10 @@ const APIs: Array<RNTesterModuleInfo> = [
   {
     key: 'PlatformColorExample',
     module: require('../examples/PlatformColor/PlatformColorExample'),
+  },
+  {
+    key: 'PixelRatio',
+    module: require('../examples/PixelRatio/PixelRatioExample'),
   },
   {
     key: 'PointerEventsExample',
@@ -255,8 +306,24 @@ const APIs: Array<RNTesterModuleInfo> = [
     module: require('../examples/Transform/TransformExample'),
   },
   {
+    key: 'FilterExample',
+    module: require('../examples/Filter/FilterExample'),
+  },
+  {
+    key: 'LinearGradient',
+    module: require('../examples/LinearGradient/LinearGradientExample'),
+  },
+  {
+    key: 'MixBlendModeExample',
+    module: require('../examples/MixBlendMode/MixBlendModeExample'),
+  },
+  {
     key: 'TurboModuleExample',
     module: require('../examples/TurboModule/TurboModuleExample'),
+  },
+  {
+    key: 'LegacyModuleExample',
+    module: require('../examples/TurboModule/LegacyModuleExample'),
   },
   {
     key: 'TurboCxxModuleExample',
@@ -274,7 +341,12 @@ const APIs: Array<RNTesterModuleInfo> = [
     key: 'XHRExample',
     module: require('../examples/XHR/XHRExample'),
   },
-];
+  {
+    key: 'PerformanceApiExample',
+    category: 'Basic',
+    module: require('../examples/Performance/PerformanceApiExample'),
+  },
+]: Array<?RNTesterModuleInfo>).filter(Boolean);
 
 if (ReactNativeFeatureFlags.shouldEmitW3CPointerEvents()) {
   APIs.push({
@@ -284,10 +356,16 @@ if (ReactNativeFeatureFlags.shouldEmitW3CPointerEvents()) {
   });
 }
 
-const Modules: {...} = {};
+const Playgrounds: Array<RNTesterModuleInfo> = [
+  {
+    key: 'PlaygroundExample',
+    module: require('../examples/Playground/PlaygroundExample'),
+  },
+];
 
-APIs.concat(Components).forEach(Example => {
-  // $FlowFixMe[prop-missing]
+const Modules: {[key: string]: RNTesterModule} = {};
+
+[...APIs, ...Components, ...Playgrounds].forEach(Example => {
   Modules[Example.key] = Example.module;
 });
 

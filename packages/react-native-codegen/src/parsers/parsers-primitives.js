@@ -11,44 +11,59 @@
 'use strict';
 
 import type {
-  Nullable,
   BooleanTypeAnnotation,
   DoubleTypeAnnotation,
+  EventTypeAnnotation,
+  FloatTypeAnnotation,
   Int32TypeAnnotation,
+  NamedShape,
   NativeModuleAliasMap,
   NativeModuleBaseTypeAnnotation,
-  NativeModuleTypeAnnotation,
-  NativeModuleFloatTypeAnnotation,
+  NativeModuleEnumDeclaration,
+  NativeModuleEnumMap,
   NativeModuleFunctionTypeAnnotation,
   NativeModuleGenericObjectTypeAnnotation,
   NativeModuleMixedTypeAnnotation,
   NativeModuleNumberTypeAnnotation,
+  NativeModuleObjectTypeAnnotation,
   NativeModulePromiseTypeAnnotation,
   NativeModuleTypeAliasTypeAnnotation,
+  NativeModuleTypeAnnotation,
   NativeModuleUnionTypeAnnotation,
+  Nullable,
+  NumberLiteralTypeAnnotation,
   ObjectTypeAnnotation,
   ReservedTypeAnnotation,
+  StringLiteralTypeAnnotation,
+  StringLiteralUnionTypeAnnotation,
   StringTypeAnnotation,
   VoidTypeAnnotation,
 } from '../CodegenSchema';
 import type {Parser} from './parser';
 import type {
   ParserErrorCapturer,
-  TypeAliasResolutionStatus,
   TypeDeclarationMap,
+  TypeResolutionStatus,
 } from './utils';
 
-const {UnsupportedUnionTypeAnnotationParserError} = require('./errors');
 const {
   throwIfArrayElementTypeAnnotationIsUnsupported,
+  throwIfPartialNotAnnotatingTypeParameter,
+  throwIfPartialWithMoreParameter,
 } = require('./error-utils');
-const {nullGuard} = require('./parsers-utils');
+const {
+  ParserError,
+  UnsupportedTypeAnnotationParserError,
+  UnsupportedUnionTypeAnnotationParserError,
+} = require('./errors');
 const {
   assertGenericTypeAnnotationHasExactlyOneTypeParameter,
-  wrapNullable,
-  unwrapNullable,
   translateFunctionTypeAnnotation,
+  unwrapNullable,
+  wrapNullable,
 } = require('./parsers-commons');
+const {nullGuard} = require('./parsers-utils');
+const {isModuleRegistryCall} = require('./utils');
 
 function emitBoolean(nullable: boolean): Nullable<BooleanTypeAnnotation> {
   return wrapNullable(nullable, {
@@ -60,6 +75,19 @@ function emitInt32(nullable: boolean): Nullable<Int32TypeAnnotation> {
   return wrapNullable(nullable, {
     type: 'Int32TypeAnnotation',
   });
+}
+
+function emitInt32Prop(
+  name: string,
+  optional: boolean,
+): NamedShape<Int32TypeAnnotation> {
+  return {
+    name,
+    optional,
+    typeAnnotation: {
+      type: 'Int32TypeAnnotation',
+    },
+  };
 }
 
 function emitNumber(
@@ -83,6 +111,19 @@ function emitDouble(nullable: boolean): Nullable<DoubleTypeAnnotation> {
   });
 }
 
+function emitDoubleProp(
+  name: string,
+  optional: boolean,
+): NamedShape<DoubleTypeAnnotation> {
+  return {
+    name,
+    optional,
+    typeAnnotation: {
+      type: 'DoubleTypeAnnotation',
+    },
+  };
+}
+
 function emitVoid(nullable: boolean): Nullable<VoidTypeAnnotation> {
   return wrapNullable(nullable, {
     type: 'VoidTypeAnnotation',
@@ -101,6 +142,7 @@ function emitFunction(
   typeAnnotation: $FlowFixMe,
   types: TypeDeclarationMap,
   aliasMap: {...NativeModuleAliasMap},
+  enumMap: {...NativeModuleEnumMap},
   tryParse: ParserErrorCapturer,
   cxxOnly: boolean,
   translateTypeAnnotation: $FlowFixMe,
@@ -112,6 +154,7 @@ function emitFunction(
       typeAnnotation,
       types,
       aliasMap,
+      enumMap,
       tryParse,
       cxxOnly,
       translateTypeAnnotation,
@@ -128,14 +171,47 @@ function emitMixed(
   });
 }
 
+function emitNumberLiteral(
+  nullable: boolean,
+  value: number,
+): Nullable<NumberLiteralTypeAnnotation> {
+  return wrapNullable(nullable, {
+    type: 'NumberLiteralTypeAnnotation',
+    value,
+  });
+}
+
 function emitString(nullable: boolean): Nullable<StringTypeAnnotation> {
   return wrapNullable(nullable, {
     type: 'StringTypeAnnotation',
   });
 }
 
+function emitStringLiteral(
+  nullable: boolean,
+  value: string,
+): Nullable<StringLiteralTypeAnnotation> {
+  return wrapNullable(nullable, {
+    type: 'StringLiteralTypeAnnotation',
+    value,
+  });
+}
+
+function emitStringProp(
+  name: string,
+  optional: boolean,
+): NamedShape<StringTypeAnnotation> {
+  return {
+    name,
+    optional,
+    typeAnnotation: {
+      type: 'StringTypeAnnotation',
+    },
+  };
+}
+
 function typeAliasResolution(
-  typeAliasResolutionStatus: TypeAliasResolutionStatus,
+  typeResolution: TypeResolutionStatus,
   objectTypeAnnotation: ObjectTypeAnnotation<
     Nullable<NativeModuleBaseTypeAnnotation>,
   >,
@@ -144,14 +220,14 @@ function typeAliasResolution(
 ):
   | Nullable<NativeModuleTypeAliasTypeAnnotation>
   | Nullable<ObjectTypeAnnotation<Nullable<NativeModuleBaseTypeAnnotation>>> {
-  if (!typeAliasResolutionStatus.successful) {
+  if (!typeResolution.successful) {
     return wrapNullable(nullable, objectTypeAnnotation);
   }
 
   /**
    * All aliases RHS are required.
    */
-  aliasMap[typeAliasResolutionStatus.aliasName] = objectTypeAnnotation;
+  aliasMap[typeResolution.name] = objectTypeAnnotation;
 
   /**
    * Nullability of type aliases is transitive.
@@ -184,7 +260,57 @@ function typeAliasResolution(
    */
   return wrapNullable(nullable, {
     type: 'TypeAliasTypeAnnotation',
-    name: typeAliasResolutionStatus.aliasName,
+    name: typeResolution.name,
+  });
+}
+
+function typeEnumResolution(
+  typeAnnotation: $FlowFixMe,
+  typeResolution: TypeResolutionStatus,
+  nullable: boolean,
+  hasteModuleName: string,
+  enumMap: {...NativeModuleEnumMap},
+  parser: Parser,
+): Nullable<NativeModuleEnumDeclaration> {
+  if (!typeResolution.successful || typeResolution.type !== 'enum') {
+    throw new UnsupportedTypeAnnotationParserError(
+      hasteModuleName,
+      typeAnnotation,
+      parser.language(),
+    );
+  }
+
+  const enumName = typeResolution.name;
+
+  const enumMemberType = parser.parseEnumMembersType(typeAnnotation);
+
+  try {
+    parser.validateEnumMembersSupported(typeAnnotation, enumMemberType);
+  } catch (e) {
+    if (e instanceof Error) {
+      throw new ParserError(
+        hasteModuleName,
+        typeAnnotation,
+        `Failed parsing the enum ${enumName} in ${hasteModuleName} with the error: ${e.message}`,
+      );
+    } else {
+      throw e;
+    }
+  }
+
+  const enumMembers = parser.parseEnumMembers(typeAnnotation);
+
+  enumMap[enumName] = {
+    name: enumName,
+    type: 'EnumDeclarationWithMembers',
+    memberType: enumMemberType,
+    members: enumMembers,
+  };
+
+  return wrapNullable(nullable, {
+    name: enumName,
+    type: 'EnumDeclaration',
+    memberType: enumMemberType,
   });
 }
 
@@ -195,6 +321,7 @@ function emitPromise(
   nullable: boolean,
   types: TypeDeclarationMap,
   aliasMap: {...NativeModuleAliasMap},
+  enumMap: {...NativeModuleEnumMap},
   tryParse: ParserErrorCapturer,
   cxxOnly: boolean,
   translateTypeAnnotation: $FlowFixMe,
@@ -212,6 +339,9 @@ function emitPromise(
   ) {
     return wrapNullable(nullable, {
       type: 'PromiseTypeAnnotation',
+      elementType: {
+        type: 'VoidTypeAnnotation',
+      },
     });
   } else {
     try {
@@ -222,6 +352,7 @@ function emitPromise(
           typeAnnotation.typeParameters.params[0],
           types,
           aliasMap,
+          enumMap,
           tryParse,
           cxxOnly,
           parser,
@@ -230,12 +361,15 @@ function emitPromise(
     } catch {
       return wrapNullable(nullable, {
         type: 'PromiseTypeAnnotation',
+        elementType: {
+          type: 'VoidTypeAnnotation',
+        },
       });
     }
   }
 }
 
-function emitObject(
+function emitGenericObject(
   nullable: boolean,
 ): Nullable<NativeModuleGenericObjectTypeAnnotation> {
   return wrapNullable(nullable, {
@@ -243,12 +377,43 @@ function emitObject(
   });
 }
 
-function emitFloat(
+function emitDictionary(
   nullable: boolean,
-): Nullable<NativeModuleFloatTypeAnnotation> {
+  valueType: Nullable<NativeModuleTypeAnnotation>,
+): Nullable<NativeModuleGenericObjectTypeAnnotation> {
+  return wrapNullable(nullable, {
+    type: 'GenericObjectTypeAnnotation',
+    dictionaryValueType: valueType,
+  });
+}
+
+function emitObject(
+  nullable: boolean,
+  properties: Array<$FlowFixMe>,
+): Nullable<NativeModuleObjectTypeAnnotation> {
+  return wrapNullable(nullable, {
+    type: 'ObjectTypeAnnotation',
+    properties,
+  });
+}
+
+function emitFloat(nullable: boolean): Nullable<FloatTypeAnnotation> {
   return wrapNullable(nullable, {
     type: 'FloatTypeAnnotation',
   });
+}
+
+function emitFloatProp(
+  name: string,
+  optional: boolean,
+): NamedShape<EventTypeAnnotation> {
+  return {
+    name,
+    optional,
+    typeAnnotation: {
+      type: 'FloatTypeAnnotation',
+    },
+  };
 }
 
 function emitUnion(
@@ -256,7 +421,14 @@ function emitUnion(
   hasteModuleName: string,
   typeAnnotation: $FlowFixMe,
   parser: Parser,
-): Nullable<NativeModuleUnionTypeAnnotation> {
+): Nullable<
+  NativeModuleUnionTypeAnnotation | StringLiteralUnionTypeAnnotation,
+> {
+  // Get all the literals by type
+  // Verify they are all the same
+  // If string, persist as StringLiteralUnionType
+  // If number, persist as NumberTypeAnnotation (TODO: Number literal)
+
   const unionTypes = parser.remapUnionTypeAnnotationMemberNames(
     typeAnnotation.types,
   );
@@ -267,7 +439,16 @@ function emitUnion(
       hasteModuleName,
       typeAnnotation,
       unionTypes,
-      parser.language(),
+    );
+  }
+
+  if (unionTypes[0] === 'StringTypeAnnotation') {
+    // Reprocess as a string literal union
+    return emitStringLiteralUnion(
+      nullable,
+      hasteModuleName,
+      typeAnnotation,
+      parser,
     );
   }
 
@@ -277,10 +458,31 @@ function emitUnion(
   });
 }
 
+function emitStringLiteralUnion(
+  nullable: boolean,
+  hasteModuleName: string,
+  typeAnnotation: $FlowFixMe,
+  parser: Parser,
+): Nullable<StringLiteralUnionTypeAnnotation> {
+  const stringLiterals =
+    parser.getStringLiteralUnionTypeAnnotationStringLiterals(
+      typeAnnotation.types,
+    );
+
+  return wrapNullable(nullable, {
+    type: 'StringLiteralUnionTypeAnnotation',
+    types: stringLiterals.map(stringLiteral => ({
+      type: 'StringLiteralTypeAnnotation',
+      value: stringLiteral,
+    })),
+  });
+}
+
 function translateArrayTypeAnnotation(
   hasteModuleName: string,
   types: TypeDeclarationMap,
   aliasMap: {...NativeModuleAliasMap},
+  enumMap: {...NativeModuleEnumMap},
   cxxOnly: boolean,
   arrayType: 'Array' | 'ReadonlyArray',
   elementType: $FlowFixMe,
@@ -300,6 +502,7 @@ function translateArrayTypeAnnotation(
         elementType,
         types,
         aliasMap,
+        enumMap,
         /**
          * TODO(T72031674): Ensure that all ParsingErrors that are thrown
          * while parsing the array element don't get captured and collected.
@@ -319,7 +522,6 @@ function translateArrayTypeAnnotation(
       elementType,
       arrayType,
       _elementType.type,
-      parser.language(),
     );
 
     return wrapNullable(nullable, {
@@ -330,6 +532,9 @@ function translateArrayTypeAnnotation(
   } catch (ex) {
     return wrapNullable(nullable, {
       type: 'ArrayTypeAnnotation',
+      elementType: {
+        type: 'AnyTypeAnnotation',
+      },
     });
   }
 }
@@ -340,6 +545,7 @@ function emitArrayType(
   parser: Parser,
   types: TypeDeclarationMap,
   aliasMap: {...NativeModuleAliasMap},
+  enumMap: {...NativeModuleEnumMap},
   cxxOnly: boolean,
   nullable: boolean,
   translateTypeAnnotation: $FlowFixMe,
@@ -354,6 +560,7 @@ function emitArrayType(
     hasteModuleName,
     types,
     aliasMap,
+    enumMap,
     cxxOnly,
     typeAnnotation.type,
     typeAnnotation.typeParameters.params[0],
@@ -363,22 +570,229 @@ function emitArrayType(
   );
 }
 
+function Visitor(infoMap: {isComponent: boolean, isModule: boolean}): {
+  [type: string]: (node: $FlowFixMe) => void,
+} {
+  return {
+    CallExpression(node: $FlowFixMe) {
+      if (
+        node.callee.type === 'Identifier' &&
+        node.callee.name === 'codegenNativeComponent'
+      ) {
+        infoMap.isComponent = true;
+      }
+
+      if (isModuleRegistryCall(node)) {
+        infoMap.isModule = true;
+      }
+    },
+    InterfaceExtends(node: $FlowFixMe) {
+      if (node.id.name === 'TurboModule') {
+        infoMap.isModule = true;
+      }
+    },
+    TSInterfaceDeclaration(node: $FlowFixMe) {
+      if (
+        Array.isArray(node.extends) &&
+        node.extends.some(
+          extension => extension.expression.name === 'TurboModule',
+        )
+      ) {
+        infoMap.isModule = true;
+      }
+    },
+  };
+}
+
+function emitPartial(
+  nullable: boolean,
+  hasteModuleName: string,
+  typeAnnotation: $FlowFixMe,
+  types: TypeDeclarationMap,
+  aliasMap: {...NativeModuleAliasMap},
+  enumMap: {...NativeModuleEnumMap},
+  tryParse: ParserErrorCapturer,
+  cxxOnly: boolean,
+  parser: Parser,
+): Nullable<NativeModuleTypeAnnotation> {
+  throwIfPartialWithMoreParameter(typeAnnotation);
+
+  throwIfPartialNotAnnotatingTypeParameter(typeAnnotation, types, parser);
+
+  const annotatedElement = parser.extractAnnotatedElement(
+    typeAnnotation,
+    types,
+  );
+  const annotatedElementProperties =
+    parser.getAnnotatedElementProperties(annotatedElement);
+
+  const partialProperties = parser.computePartialProperties(
+    annotatedElementProperties,
+    hasteModuleName,
+    types,
+    aliasMap,
+    enumMap,
+    tryParse,
+    cxxOnly,
+  );
+
+  return emitObject(nullable, partialProperties);
+}
+
+function emitCommonTypes(
+  hasteModuleName: string,
+  types: TypeDeclarationMap,
+  typeAnnotation: $FlowFixMe,
+  aliasMap: {...NativeModuleAliasMap},
+  enumMap: {...NativeModuleEnumMap},
+  tryParse: ParserErrorCapturer,
+  cxxOnly: boolean,
+  nullable: boolean,
+  parser: Parser,
+): $FlowFixMe {
+  const typeMap = {
+    Stringish: emitStringish,
+    Int32: emitInt32,
+    Double: emitDouble,
+    Float: emitFloat,
+    UnsafeObject: emitGenericObject,
+    Object: emitGenericObject,
+    $Partial: emitPartial,
+    Partial: emitPartial,
+    BooleanTypeAnnotation: emitBoolean,
+    NumberTypeAnnotation: emitNumber,
+    VoidTypeAnnotation: emitVoid,
+    StringTypeAnnotation: emitString,
+    MixedTypeAnnotation: cxxOnly ? emitMixed : emitGenericObject,
+  };
+
+  const typeAnnotationName = parser.convertKeywordToTypeAnnotation(
+    typeAnnotation.type,
+  );
+
+  // $FlowFixMe[invalid-computed-prop]
+  const simpleEmitter = typeMap[typeAnnotationName];
+  if (simpleEmitter) {
+    return simpleEmitter(nullable);
+  }
+
+  const genericTypeAnnotationName =
+    parser.getTypeAnnotationName(typeAnnotation);
+
+  // $FlowFixMe[invalid-computed-prop]
+  const emitter = typeMap[genericTypeAnnotationName];
+  if (!emitter) {
+    return null;
+  }
+
+  return emitter(
+    nullable,
+    hasteModuleName,
+    typeAnnotation,
+    types,
+    aliasMap,
+    enumMap,
+    tryParse,
+    cxxOnly,
+    parser,
+  );
+}
+
+function emitBoolProp(
+  name: string,
+  optional: boolean,
+): NamedShape<EventTypeAnnotation> {
+  return {
+    name,
+    optional,
+    typeAnnotation: {
+      type: 'BooleanTypeAnnotation',
+    },
+  };
+}
+
+function emitMixedProp(
+  name: string,
+  optional: boolean,
+): NamedShape<EventTypeAnnotation> {
+  return {
+    name,
+    optional,
+    typeAnnotation: {
+      type: 'MixedTypeAnnotation',
+    },
+  };
+}
+
+function emitObjectProp(
+  name: string,
+  optional: boolean,
+  parser: Parser,
+  typeAnnotation: $FlowFixMe,
+  extractArrayElementType: (
+    typeAnnotation: $FlowFixMe,
+    name: string,
+    parser: Parser,
+  ) => EventTypeAnnotation,
+): NamedShape<EventTypeAnnotation> {
+  return {
+    name,
+    optional,
+    typeAnnotation: extractArrayElementType(typeAnnotation, name, parser),
+  };
+}
+
+function emitUnionProp(
+  name: string,
+  optional: boolean,
+  parser: Parser,
+  typeAnnotation: $FlowFixMe,
+): NamedShape<EventTypeAnnotation> {
+  return {
+    name,
+    optional,
+    typeAnnotation: {
+      type: 'StringLiteralUnionTypeAnnotation',
+      types: typeAnnotation.types.map(option => ({
+        type: 'StringLiteralTypeAnnotation',
+        value: parser.getLiteralValue(option),
+      })),
+    },
+  };
+}
+
 module.exports = {
   emitArrayType,
   emitBoolean,
+  emitBoolProp,
   emitDouble,
+  emitDoubleProp,
   emitFloat,
+  emitFloatProp,
   emitFunction,
   emitInt32,
+  emitInt32Prop,
+  emitMixedProp,
   emitNumber,
+  emitNumberLiteral,
+  emitGenericObject,
+  emitDictionary,
   emitObject,
   emitPromise,
   emitRootTag,
   emitVoid,
   emitString,
   emitStringish,
+  emitStringProp,
+  emitStringLiteral,
   emitMixed,
   emitUnion,
+  emitPartial,
+  emitCommonTypes,
   typeAliasResolution,
+  typeEnumResolution,
   translateArrayTypeAnnotation,
+  Visitor,
+  emitObjectProp,
+  emitUnionProp,
 };

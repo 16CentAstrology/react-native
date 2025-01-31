@@ -8,16 +8,17 @@
  * @format
  */
 
+import type {SectionBase} from 'react-native/Libraries/Lists/SectionList';
+
+import * as React from 'react';
 import {
-  Pressable,
   Button,
+  Pressable,
   SectionList,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-
-import * as React from 'react';
 
 const DATA = [
   {
@@ -34,7 +35,7 @@ const DATA = [
   },
   {
     title: 'Desserts',
-    data: ['Cheesecake', 'Ice Cream'],
+    data: ['Cheesecake', 'Brownie'],
   },
 ];
 
@@ -65,18 +66,18 @@ const Item = ({item, section, separators}) => {
   );
 };
 
-type Props = {
-  exampleProps: $Shape<React.ElementConfig<typeof SectionList>>,
+type Props = $ReadOnly<{
+  exampleProps: Partial<React.ElementConfig<typeof SectionList>>,
   onTest?: ?() => void,
   testLabel?: ?string,
   testOutput?: ?string,
   children?: ?React.Node,
-};
+}>;
 
-const SectionListBaseExample: React.AbstractComponent<
-  Props,
-  React.ElementRef<typeof SectionList>,
-> = React.forwardRef((props: Props, ref): React.Node => {
+const SectionListBaseExample: component(
+  ref: React.RefSetter<SectionList<SectionBase<mixed>>>,
+  ...props: Props
+) = React.forwardRef((props: Props, ref): React.Node => {
   return (
     <View style={styles.container}>
       {props.testOutput != null ? (
@@ -98,10 +99,13 @@ const SectionListBaseExample: React.AbstractComponent<
         ref={ref}
         testID="section_list"
         accessibilityRole="list"
+        // $FlowFixMe[incompatible-type]
         sections={DATA}
         keyExtractor={(item, index) => item + index}
         style={styles.list}
         renderItem={Item}
+        /* $FlowFixMe[prop-missing] Error revealed after improved builtin React
+         * utility types */
         renderSectionHeader={({section: {title}}) => (
           <Text style={styles.header}>{title}</Text>
         )}

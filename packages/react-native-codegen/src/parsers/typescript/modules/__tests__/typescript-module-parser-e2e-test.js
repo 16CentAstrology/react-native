@@ -9,21 +9,23 @@
  */
 
 import type {
-  NativeModuleReturnTypeAnnotation,
   NativeModuleBaseTypeAnnotation,
-  NativeModuleSchema,
   NativeModuleParamTypeAnnotation,
+  NativeModuleReturnTypeAnnotation,
+  NativeModuleSchema,
 } from '../../../../CodegenSchema';
 
-const {parseString} = require('../../index.js');
-const {unwrapNullable} = require('../../../parsers-commons');
 const {
+  MissingTypeParameterGenericParserError,
+  UnnamedFunctionParamParserError,
   UnsupportedGenericParserError,
   UnsupportedTypeAnnotationParserError,
-  UnnamedFunctionParamParserError,
-  MissingTypeParameterGenericParserError,
 } = require('../../../errors');
+const {unwrapNullable} = require('../../../parsers-commons');
+const {TypeScriptParser} = require('../../parser');
 const invariant = require('invariant');
+
+const typescriptParser = new TypeScriptParser();
 
 type PrimitiveTypeAnnotationType =
   | 'StringTypeAnnotation'
@@ -57,7 +59,7 @@ type AnimalPointer = Animal;
 `;
 
 function expectAnimalTypeAliasToExist(module: NativeModuleSchema) {
-  const animalAlias = module.aliases.Animal;
+  const animalAlias = module.aliasMap.Animal;
 
   expect(animalAlias).not.toBe(null);
   invariant(animalAlias != null, '');
@@ -104,6 +106,82 @@ describe('TypeScript Module Parser', () => {
       expect(parser).toThrow(UnnamedFunctionParamParserError);
     });
 
+    it('should properly parse negative enums', () => {
+      const parser = () =>
+        parseModule(`
+          import type {TurboModule} from 'RCTExport';
+          import * as TurboModuleRegistry from 'TurboModuleRegistry';
+          enum MyEnum {
+            ZERO = 0,
+            POSITIVE = 1,
+            NEGATIVE = -1,
+          }
+          export interface Spec extends TurboModule {
+            useArg(arg: MyEnum): void;
+          }
+          export default TurboModuleRegistry.get<Spec>('Foo');
+        `);
+
+      expect(parser).not.toThrow();
+      expect(parser().enumMap.MyEnum.members).toEqual([
+        {
+          name: 'ZERO',
+          value: {
+            type: 'NumberLiteralTypeAnnotation',
+            value: 0,
+          },
+        },
+        {
+          name: 'POSITIVE',
+          value: {
+            type: 'NumberLiteralTypeAnnotation',
+            value: 1,
+          },
+        },
+        {
+          name: 'NEGATIVE',
+          value: {
+            type: 'NumberLiteralTypeAnnotation',
+            value: -1,
+          },
+        },
+      ]);
+    });
+
+    it('should properly parse enums', () => {
+      const parser = () =>
+        parseModule(`
+          import type {TurboModule} from 'RCTExport';
+          import * as TurboModuleRegistry from 'TurboModuleRegistry';
+          enum MyEnum {
+            ZERO = 0,
+            POSITIVE = 1,
+          }
+          export interface Spec extends TurboModule {
+            useArg(arg: MyEnum): void;
+          }
+          export default TurboModuleRegistry.get<Spec>('Foo');
+        `);
+
+      expect(parser).not.toThrow();
+      expect(parser().enumMap.MyEnum.members).toEqual([
+        {
+          name: 'ZERO',
+          value: {
+            type: 'NumberLiteralTypeAnnotation',
+            value: 0,
+          },
+        },
+        {
+          name: 'POSITIVE',
+          value: {
+            type: 'NumberLiteralTypeAnnotation',
+            value: 1,
+          },
+        },
+      ]);
+    });
+
     [
       {nullable: false, optional: false},
       {nullable: false, optional: true},
@@ -148,10 +226,9 @@ describe('TypeScript Module Parser', () => {
           export default TurboModuleRegistry.get<Spec>('Foo');
         `);
 
-        expect(module.spec.properties[0]).not.toBe(null);
-        const param = unwrapNullable(
-          module.spec.properties[0].typeAnnotation,
-        )[0].params[0];
+        expect(module.spec.methods[0]).not.toBe(null);
+        const param = unwrapNullable(module.spec.methods[0].typeAnnotation)[0]
+          .params[0];
         expect(param).not.toBe(null);
         expect(param.name).toBe(paramName);
         expect(param.optional).toBe(optional);
@@ -228,8 +305,13 @@ describe('TypeScript Module Parser', () => {
               expect(paramTypeAnnotation.type).toBe('ArrayTypeAnnotation');
               invariant(paramTypeAnnotation.type === 'ArrayTypeAnnotation', '');
 
-              expect(paramTypeAnnotation.elementType).not.toBe(null);
-              invariant(paramTypeAnnotation.elementType != null, '');
+              expect(paramTypeAnnotation.elementType.type).not.toEqual(
+                'AnyTypeAnnotation',
+              );
+              invariant(
+                paramTypeAnnotation.elementType.type !== 'AnyTypeAnnotation',
+                '',
+              );
               const [elementType, isElementTypeNullable] =
                 unwrapNullable<NativeModuleBaseTypeAnnotation>(
                   paramTypeAnnotation.elementType,
@@ -359,9 +441,9 @@ describe('TypeScript Module Parser', () => {
               export default TurboModuleRegistry.get<Spec>('Foo');
             `);
 
-            expect(module.spec.properties[0]).not.toBe(null);
+            expect(module.spec.methods[0]).not.toBe(null);
             const param = unwrapNullable(
-              module.spec.properties[0].typeAnnotation,
+              module.spec.methods[0].typeAnnotation,
             )[0].params[0];
             expect(param.name).toBe('arg');
             expect(param.optional).toBe(optional);
@@ -531,9 +613,14 @@ describe('TypeScript Module Parser', () => {
 
                     const {elementType: nullableElementType} =
                       property.typeAnnotation;
-                    expect(nullableElementType).not.toBe(null);
-                    invariant(nullableElementType != null, '');
+                    expect(nullableElementType.type).not.toEqual(
+                      'AnyTypeAnnotation',
+                    );
 
+                    invariant(
+                      nullableElementType.type !== 'AnyTypeAnnotation',
+                      '',
+                    );
                     const [elementType, isElementTypeNullable] =
                       unwrapNullable<NativeModuleBaseTypeAnnotation>(
                         nullableElementType,
@@ -696,10 +783,10 @@ describe('TypeScript Module Parser', () => {
         export default TurboModuleRegistry.get<Spec>('Foo');
       `);
 
-      expect(module.spec.properties[0]).not.toBe(null);
+      expect(module.spec.methods[0]).not.toBe(null);
 
       const [functionTypeAnnotation, isFunctionTypeAnnotationNullable] =
-        unwrapNullable(module.spec.properties[0].typeAnnotation);
+        unwrapNullable(module.spec.methods[0].typeAnnotation);
       expect(isFunctionTypeAnnotationNullable).toBe(false);
 
       const [returnTypeAnnotation, isReturnTypeAnnotationNullable] =
@@ -730,9 +817,9 @@ describe('TypeScript Module Parser', () => {
           export default TurboModuleRegistry.get<Spec>('Foo');
         `);
 
-        expect(module.spec.properties[0]).not.toBe(null);
+        expect(module.spec.methods[0]).not.toBe(null);
         const [functionTypeAnnotation, isFunctionTypeAnnotationNullable] =
-          unwrapNullable(module.spec.properties[0].typeAnnotation);
+          unwrapNullable(module.spec.methods[0].typeAnnotation);
         expect(isFunctionTypeAnnotationNullable).toBe(false);
 
         const [returnTypeAnnotation, isReturnTypeAnnotationNullable] =
@@ -799,8 +886,8 @@ describe('TypeScript Module Parser', () => {
               const arrayTypeAnnotation = returnTypeAnnotation;
 
               const {elementType} = arrayTypeAnnotation;
-              expect(elementType).not.toBe(null);
-              invariant(elementType != null, '');
+              expect(elementType.type).not.toEqual('AnyTypeAnnotation');
+              invariant(elementType.type !== 'AnyTypeAnnotation', '');
 
               const [elementTypeAnnotation, isElementTypeAnnotation] =
                 unwrapNullable<NativeModuleBaseTypeAnnotation>(elementType);
@@ -1072,8 +1159,13 @@ describe('TypeScript Module Parser', () => {
 
                       const {elementType: nullableElementType} =
                         property.typeAnnotation;
-                      expect(nullableElementType).not.toBe(null);
-                      invariant(nullableElementType != null, '');
+                      expect(nullableElementType).not.toEqual(
+                        'AnyTypeAnnotation',
+                      );
+                      invariant(
+                        nullableElementType.type !== 'AnyTypeAnnotation',
+                        '',
+                      );
 
                       const [elementType, isElementTypeNullable] =
                         unwrapNullable<NativeModuleBaseTypeAnnotation>(
@@ -1228,7 +1320,7 @@ describe('TypeScript Module Parser', () => {
 });
 
 function parseModule(source: string) {
-  const schema = parseString(source, `${MODULE_NAME}.ts`);
+  const schema = typescriptParser.parseString(source, `${MODULE_NAME}.ts`);
   const module = schema.modules.NativeFoo;
   invariant(
     module.type === 'NativeModule',

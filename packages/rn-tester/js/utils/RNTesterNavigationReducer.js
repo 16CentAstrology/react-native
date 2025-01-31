@@ -9,45 +9,18 @@
  */
 
 import type {
-  RNTesterNavigationState,
   ComponentList,
+  RNTesterNavigationState,
 } from '../types/RNTesterTypes';
 
 export const RNTesterNavigationActionsType = {
   NAVBAR_PRESS: 'NAVBAR_PRESS',
-  BOOKMARK_PRESS: 'BOOKMARK_PRESS',
   BACK_BUTTON_PRESS: 'BACK_BUTTON_PRESS',
   MODULE_CARD_PRESS: 'MODULE_CARD_PRESS',
   EXAMPLE_CARD_PRESS: 'EXAMPLE_CARD_PRESS',
-};
-
-const getUpdatedBookmarks = ({
-  exampleType,
-  key,
-  bookmarks,
-}: {
-  exampleType: 'apis' | 'components' | null,
-  key: string | null,
-  bookmarks: ComponentList,
-}) => {
-  const updatedBookmarks = bookmarks
-    ? {...bookmarks}
-    : {components: [], apis: []};
-
-  if (!exampleType || !key) {
-    return null;
-  }
-
-  if (updatedBookmarks[exampleType].includes(key)) {
-    updatedBookmarks[exampleType] = updatedBookmarks[exampleType].filter(
-      k => k !== key,
-    );
-  } else {
-    updatedBookmarks[exampleType].push(key);
-  }
-
-  return updatedBookmarks;
-};
+  EXAMPLE_OPEN_URL_REQUEST: 'EXAMPLE_OPEN_URL_REQUEST',
+  NAVBAR_OPEN_MODULE_PRESS: 'NAVBAR_OPEN_MODULE_PRESS',
+} as const;
 
 const getUpdatedRecentlyUsed = ({
   exampleType,
@@ -60,7 +33,8 @@ const getUpdatedRecentlyUsed = ({
 }) => {
   const updatedRecentlyUsed = recentlyUsed
     ? {...recentlyUsed}
-    : {components: [], apis: []};
+    : // $FlowFixMe[missing-empty-array-annot]
+      {components: [], apis: []};
 
   if (!exampleType || !key) {
     return updatedRecentlyUsed;
@@ -71,6 +45,7 @@ const getUpdatedRecentlyUsed = ({
   if (existingKeys.includes(key)) {
     existingKeys = existingKeys.filter(k => k !== key);
   }
+  // $FlowFixMe[incompatible-call]
   existingKeys.unshift(key);
 
   updatedRecentlyUsed[exampleType] = existingKeys.slice(0, 5);
@@ -83,7 +58,13 @@ export const RNTesterNavigationReducer = (
   action: {type: $Keys<typeof RNTesterNavigationActionsType>, data?: any},
 ): RNTesterNavigationState => {
   const {
-    data: {key = null, title = null, exampleType = null, screen = null} = {},
+    data: {
+      key = null,
+      title = null,
+      exampleKey = null,
+      exampleType = null,
+      screen = null,
+    } = {},
   } = action;
 
   switch (action.type) {
@@ -94,6 +75,17 @@ export const RNTesterNavigationReducer = (
         activeModuleTitle: null,
         activeModuleExampleKey: null,
         screen,
+        hadDeepLink: false,
+      };
+
+    case RNTesterNavigationActionsType.NAVBAR_OPEN_MODULE_PRESS:
+      return {
+        ...state,
+        activeModuleKey: key,
+        activeModuleTitle: title,
+        activeModuleExampleKey: null,
+        screen,
+        hadDeepLink: true,
       };
 
     case RNTesterNavigationActionsType.MODULE_CARD_PRESS:
@@ -102,6 +94,7 @@ export const RNTesterNavigationReducer = (
         activeModuleKey: key,
         activeModuleTitle: title,
         activeModuleExampleKey: null,
+        // $FlowFixMe[incompatible-return]
         recentlyUsed: getUpdatedRecentlyUsed({
           exampleType: exampleType,
           key: key,
@@ -115,25 +108,32 @@ export const RNTesterNavigationReducer = (
         activeModuleExampleKey: key,
       };
 
-    case RNTesterNavigationActionsType.BOOKMARK_PRESS:
-      return {
-        ...state,
-        bookmarks: getUpdatedBookmarks({
-          exampleType: exampleType,
-          key: key,
-          bookmarks: state.bookmarks,
-        }),
-      };
-
     case RNTesterNavigationActionsType.BACK_BUTTON_PRESS:
-      // Go back to module or list
+      // Go back to module or list.
       return {
         ...state,
         activeModuleExampleKey: null,
         activeModuleKey:
-          state.activeModuleExampleKey != null ? state.activeModuleKey : null,
+          !state.hadDeepLink && state.activeModuleExampleKey != null
+            ? state.activeModuleKey
+            : null,
         activeModuleTitle:
-          state.activeModuleExampleKey != null ? state.activeModuleTitle : null,
+          !state.hadDeepLink && state.activeModuleExampleKey != null
+            ? state.activeModuleTitle
+            : null,
+        hadDeepLink: false,
+        // If there was a deeplink navigation, pressing Back should bring us back to the root.
+        screen: state.hadDeepLink ? 'components' : state.screen,
+      };
+
+    case RNTesterNavigationActionsType.EXAMPLE_OPEN_URL_REQUEST:
+      return {
+        ...state,
+        activeModuleKey: key,
+        activeModuleTitle: title,
+        activeModuleExampleKey: exampleKey,
+        hadDeepLink: true,
+        screen: 'components',
       };
 
     default:
