@@ -10,16 +10,15 @@
 
 'use strict';
 
-const React = require('react');
-const {
+import AnExSet from './AnExSet';
+import React from 'react';
+import {
   Animated,
   LayoutAnimation,
   PanResponder,
   StyleSheet,
   View,
-} = require('react-native');
-
-const AnExSet = require('./AnExSet');
+} from 'react-native';
 
 const CIRCLE_SIZE = 80;
 const CIRCLE_MARGIN = 18;
@@ -189,7 +188,7 @@ class Circle extends React.Component<any, any> {
       </Animated.View>
     );
   }
-  _toggleIsActive = (velocity: void) => {
+  _toggleIsActive = (velocity: ?number) => {
     const config = {tension: 30, friction: 7};
     if (this.state.isActive) {
       Animated.spring(this.props.openVal, {
@@ -393,7 +392,7 @@ exports.description =
 exports.examples = [
   {
     title: 'And example app',
-    render(): React.Element<typeof AnExApp> {
+    render(): React.MixedElement {
       return <AnExApp />;
     },
   },

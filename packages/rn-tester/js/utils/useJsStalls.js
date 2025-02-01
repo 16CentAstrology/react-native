@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @format
- * @flow
+ * @flow strict-local
  */
 
-import * as React from 'react';
-
 import type {RNTesterJsStallsState} from '../types/RNTesterTypes';
+
+import * as React from 'react';
 
 const INITIAL_STATE: RNTesterJsStallsState = {
   stallIntervalId: null,
@@ -56,7 +56,8 @@ const useJsStalls = (): ({
   }, []);
 
   const onEnableJsStallsTracking = React.useCallback(() => {
-    const JSEventLoopWatchdog = require('react-native/Libraries/Interaction/JSEventLoopWatchdog');
+    const JSEventLoopWatchdog =
+      require('react-native/Libraries/Interaction/JSEventLoopWatchdog').default;
 
     JSEventLoopWatchdog.install({thresholdMS: 25});
 

@@ -9,6 +9,7 @@
 
 #import <React/RCTAssert.h>
 #import <React/RCTBridge+Private.h>
+#import <React/RCTConstants.h>
 #import <React/RCTDevSettings.h>
 #import <React/RCTLog.h>
 #import <React/RCTRootView.h>
@@ -87,8 +88,9 @@ RCT_NOT_IMPLEMENTED(-(instancetype)init)
 - (NSURL *)defaultScriptURL
 {
   if (getenv("CI_USE_PACKAGER") || _useBundler) {
-    return [NSURL
-        URLWithString:[NSString stringWithFormat:@"http://localhost:8081/%@.bundle?platform=ios&dev=true", _appPath]];
+    return [NSURL URLWithString:[NSString stringWithFormat:@"http://localhost:8081/%@.bundle?platform=%@&dev=true",
+                                                           _appPath,
+                                                           RCTPlatformName]];
   } else {
     return [[NSBundle bundleForClass:[RCTBridge class]] URLForResource:@"main" withExtension:@"jsbundle"];
   }
@@ -179,7 +181,6 @@ RCT_NOT_IMPLEMENTED(-(instancetype)init)
     } else {
       bridge = [[RCTBridge alloc] initWithBundleURL:_scriptURL moduleProvider:_moduleProvider launchOptions:nil];
     }
-    [bridge.devSettings setIsDebuggingRemotely:_useJSDebugger];
     batchedBridge = [bridge batchedBridge];
 
     UIViewController *vc = RCTSharedApplication().delegate.window.rootViewController;

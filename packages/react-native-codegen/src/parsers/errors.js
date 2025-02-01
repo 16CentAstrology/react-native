@@ -11,7 +11,6 @@
 'use strict';
 
 import type {UnionTypeAnnotationMemberType} from '../CodegenSchema';
-
 import type {Parser} from './parser';
 export type ParserType = 'Flow' | 'TypeScript';
 
@@ -77,6 +76,41 @@ class MoreThanOneModuleInterfaceParserError extends ParserError {
   }
 }
 
+class UnsupportedModuleEventEmitterTypePropertyParserError extends ParserError {
+  constructor(
+    nativeModuleName: string,
+    propertyValue: $FlowFixMe,
+    propertyName: string,
+    language: ParserType,
+    nullable: boolean,
+  ) {
+    super(
+      nativeModuleName,
+      propertyValue,
+      `Property '${propertyName}' is an EventEmitter and must have a non nullable eventType`,
+    );
+  }
+}
+
+class UnsupportedModuleEventEmitterPropertyParserError extends ParserError {
+  constructor(
+    nativeModuleName: string,
+    propertyValue: $FlowFixMe,
+    propertyName: string,
+    language: ParserType,
+    nullable: boolean,
+    untyped: boolean,
+  ) {
+    let message = `${language} interfaces extending TurboModule must only contain 'FunctionTypeAnnotation's or non nullable 'EventEmitter's. Further the EventEmitter property `;
+    if (nullable) {
+      message += `'${propertyValue}' must non nullable.`;
+    } else if (untyped) {
+      message += `'${propertyValue}' must have a concrete or void eventType.`;
+    }
+    super(nativeModuleName, propertyValue, message);
+  }
+}
+
 class UnsupportedModulePropertyParserError extends ParserError {
   constructor(
     nativeModuleName: string,
@@ -88,7 +122,7 @@ class UnsupportedModulePropertyParserError extends ParserError {
     super(
       nativeModuleName,
       propertyValue,
-      `${language} interfaces extending TurboModule must only contain 'FunctionTypeAnnotation's. Property '${propertyName}' refers to a '${invalidPropertyValueType}'.`,
+      `${language} interfaces extending TurboModule must only contain 'FunctionTypeAnnotation's or non nullable 'EventEmitter's. Property '${propertyName}' refers to a '${invalidPropertyValueType}'.`,
     );
   }
 }
@@ -117,9 +151,7 @@ class UnsupportedGenericParserError extends ParserError {
     genericTypeAnnotation: $FlowFixMe,
     parser: Parser,
   ) {
-    const genericName = parser.nameForGenericTypeAnnotation(
-      genericTypeAnnotation,
-    );
+    const genericName = parser.getTypeAnnotationName(genericTypeAnnotation);
     super(
       nativeModuleName,
       genericTypeAnnotation,
@@ -136,9 +168,7 @@ class MissingTypeParameterGenericParserError extends ParserError {
     genericTypeAnnotation: $FlowFixMe,
     parser: Parser,
   ) {
-    const genericName = parser.nameForGenericTypeAnnotation(
-      genericTypeAnnotation,
-    );
+    const genericName = parser.getTypeAnnotationName(genericTypeAnnotation);
 
     super(
       nativeModuleName,
@@ -154,9 +184,7 @@ class MoreThanOneTypeParameterGenericParserError extends ParserError {
     genericTypeAnnotation: $FlowFixMe,
     parser: Parser,
   ) {
-    const genericName = parser.nameForGenericTypeAnnotation(
-      genericTypeAnnotation,
-    );
+    const genericName = parser.getTypeAnnotationName(genericTypeAnnotation);
 
     super(
       nativeModuleName,
@@ -176,7 +204,6 @@ class UnsupportedArrayElementTypeAnnotationParserError extends ParserError {
     arrayElementTypeAST: $FlowFixMe,
     arrayType: 'Array' | '$ReadOnlyArray' | 'ReadonlyArray',
     invalidArrayElementType: string,
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -210,13 +237,21 @@ class UnsupportedObjectPropertyTypeAnnotationParserError extends ParserError {
   }
 }
 
+class UnsupportedObjectPropertyWithIndexerTypeAnnotationParserError extends ParserError {
+  constructor(nativeModuleName: string, propertyAST: $FlowFixMe) {
+    let message =
+      "'ObjectTypeAnnotation' cannot contain both an indexer and properties.";
+
+    super(nativeModuleName, propertyAST, message);
+  }
+}
+
 class UnsupportedObjectPropertyValueTypeAnnotationParserError extends ParserError {
   constructor(
     nativeModuleName: string,
     propertyValueAST: $FlowFixMe,
     propertyName: string,
     invalidPropertyValueType: string,
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -226,16 +261,26 @@ class UnsupportedObjectPropertyValueTypeAnnotationParserError extends ParserErro
   }
 }
 
+class UnsupportedObjectDirectRecursivePropertyParserError extends ParserError {
+  constructor(
+    propertyName: string,
+    propertyValueAST: $FlowFixMe,
+    nativeModuleName: string,
+  ) {
+    super(
+      nativeModuleName,
+      propertyValueAST,
+      `Object property '${propertyName}' is direct recursive and must be nullable.`,
+    );
+  }
+}
+
 /**
  * Function parsing errors
  */
 
 class UnnamedFunctionParamParserError extends ParserError {
-  constructor(
-    functionParam: $FlowFixMe,
-    nativeModuleName: string,
-    language: ParserType,
-  ) {
+  constructor(functionParam: $FlowFixMe, nativeModuleName: string) {
     super(
       nativeModuleName,
       functionParam,
@@ -264,7 +309,6 @@ class UnsupportedFunctionReturnTypeAnnotationParserError extends ParserError {
     nativeModuleName: string,
     flowReturnTypeAnnotation: $FlowFixMe,
     invalidReturnType: string,
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -283,7 +327,6 @@ class UnsupportedEnumDeclarationParserError extends ParserError {
     nativeModuleName: string,
     arrayElementTypeAST: $FlowFixMe,
     memberType: string,
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -302,7 +345,6 @@ class UnsupportedUnionTypeAnnotationParserError extends ParserError {
     nativeModuleName: string,
     arrayElementTypeAST: $FlowFixMe,
     types: UnionTypeAnnotationMemberType[],
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -319,11 +361,7 @@ class UnsupportedUnionTypeAnnotationParserError extends ParserError {
  */
 
 class UnusedModuleInterfaceParserError extends ParserError {
-  constructor(
-    nativeModuleName: string,
-    flowInterface: $FlowFixMe,
-    language: ParserType,
-  ) {
+  constructor(nativeModuleName: string, flowInterface: $FlowFixMe) {
     super(
       nativeModuleName,
       flowInterface,
@@ -337,7 +375,6 @@ class MoreThanOneModuleRegistryCallsParserError extends ParserError {
     nativeModuleName: string,
     flowCallExpressions: $FlowFixMe,
     numCalls: number,
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -353,7 +390,6 @@ class UntypedModuleRegistryCallParserError extends ParserError {
     flowCallExpression: $FlowFixMe,
     methodName: string,
     moduleName: string,
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -369,7 +405,6 @@ class IncorrectModuleRegistryCallTypeParameterParserError extends ParserError {
     flowTypeArguments: $FlowFixMe,
     methodName: string,
     moduleName: string,
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -385,7 +420,6 @@ class IncorrectModuleRegistryCallArityParserError extends ParserError {
     flowCallExpression: $FlowFixMe,
     methodName: string,
     incorrectArity: number,
-    language: ParserType,
   ) {
     super(
       nativeModuleName,
@@ -401,7 +435,6 @@ class IncorrectModuleRegistryCallArgumentTypeParserError extends ParserError {
     flowArgument: $FlowFixMe,
     methodName: string,
     type: string,
-    language: ParserType,
   ) {
     const a = /[aeiouy]/.test(type.toLowerCase()) ? 'an' : 'a';
     super(
@@ -427,9 +460,13 @@ module.exports = {
   UnsupportedFunctionReturnTypeAnnotationParserError,
   UnsupportedEnumDeclarationParserError,
   UnsupportedUnionTypeAnnotationParserError,
+  UnsupportedModuleEventEmitterTypePropertyParserError,
+  UnsupportedModuleEventEmitterPropertyParserError,
   UnsupportedModulePropertyParserError,
   UnsupportedObjectPropertyTypeAnnotationParserError,
+  UnsupportedObjectPropertyWithIndexerTypeAnnotationParserError,
   UnsupportedObjectPropertyValueTypeAnnotationParserError,
+  UnsupportedObjectDirectRecursivePropertyParserError,
   UnusedModuleInterfaceParserError,
   MoreThanOneModuleRegistryCallsParserError,
   UntypedModuleRegistryCallParserError,
