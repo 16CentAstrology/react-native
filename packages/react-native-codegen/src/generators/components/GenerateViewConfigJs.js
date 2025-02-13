@@ -60,12 +60,13 @@ function getReactDiffProcessValue(typeAnnotation: PropTypeAnnotation) {
     case 'ObjectTypeAnnotation':
     case 'StringEnumTypeAnnotation':
     case 'Int32EnumTypeAnnotation':
+    case 'MixedTypeAnnotation':
       return j.literal(true);
     case 'ReservedPropTypeAnnotation':
       switch (typeAnnotation.name) {
         case 'ColorPrimitive':
           return j.template
-            .expression`{ process: require('react-native/Libraries/StyleSheet/processColor') }`;
+            .expression`{ process: require('react-native/Libraries/StyleSheet/processColor').default }`;
         case 'ImageSourcePrimitive':
           return j.template
             .expression`{ process: require('react-native/Libraries/Image/resolveAssetSource') }`;
@@ -73,10 +74,12 @@ function getReactDiffProcessValue(typeAnnotation: PropTypeAnnotation) {
           throw new Error('ImageRequest should not be used in props');
         case 'PointPrimitive':
           return j.template
-            .expression`{ diff: require('react-native/Libraries/Utilities/differ/pointsDiffer') }`;
+            .expression`{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/pointsDiffer')) }`;
         case 'EdgeInsetsPrimitive':
           return j.template
-            .expression`{ diff: require('react-native/Libraries/Utilities/differ/insetsDiffer') }`;
+            .expression`{ diff: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/Utilities/differ/insetsDiffer')) }`;
+        case 'DimensionPrimitive':
+          return j.literal(true);
         default:
           (typeAnnotation.name: empty);
           throw new Error(
@@ -88,10 +91,11 @@ function getReactDiffProcessValue(typeAnnotation: PropTypeAnnotation) {
         switch (typeAnnotation.elementType.name) {
           case 'ColorPrimitive':
             return j.template
-              .expression`{ process: require('react-native/Libraries/StyleSheet/processColorArray') }`;
+              .expression`{ process: ((req) => 'default' in req ? req.default : req)(require('react-native/Libraries/StyleSheet/processColorArray')) }`;
           case 'ImageSourcePrimitive':
-            return j.literal(true);
           case 'PointPrimitive':
+          case 'EdgeInsetsPrimitive':
+          case 'DimensionPrimitive':
             return j.literal(true);
           default:
             throw new Error(
@@ -193,7 +197,7 @@ function generateBubblingEventInfo(
 ) {
   return j.property(
     'init',
-    j.identifier(nameOveride || normalizeInputEventName(event.name)),
+    j.identifier(normalizeInputEventName(nameOveride || event.name)),
     j.objectExpression([
       j.property(
         'init',
@@ -217,7 +221,7 @@ function generateDirectEventInfo(
 ) {
   return j.property(
     'init',
-    j.identifier(nameOveride || normalizeInputEventName(event.name)),
+    j.identifier(normalizeInputEventName(nameOveride || event.name)),
     j.objectExpression([
       j.property(
         'init',

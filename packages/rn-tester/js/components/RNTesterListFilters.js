@@ -11,7 +11,6 @@
 'use strict';
 
 const React = require('react');
-
 const {StyleSheet, Text, TouchableOpacity, View} = require('react-native');
 
 const filters = ['Basic', 'UI', 'ListView', 'iOS', 'Android'];
@@ -23,7 +22,7 @@ type Props = {
 
 class RNTesterListFilters extends React.Component<
   Props,
-  {|currentFilter: string|},
+  {currentFilter: string},
 > {
   constructor(props: Props) {
     super(props);

@@ -5,13 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @format
- * @flow
+ * @flow strict-local
  */
 
 'use strict';
+
+import type {RNTesterModuleExample} from '../../types/RNTesterTypes';
+
 import SectionListBaseExample from './SectionListBaseExample';
 import * as React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 
 export function SectionList_contentInset(): React.Node {
   const [initialContentInset, toggledContentInset] = [44, 88];
@@ -77,8 +80,8 @@ const styles = StyleSheet.create({
 export default {
   title: 'SectionList Content Inset',
   platform: 'ios',
-  name: 'SectionList-contentInset',
-  render: function (): React.Element<typeof SectionList_contentInset> {
+  name: 'contentInset',
+  render: function (): React.MixedElement {
     return <SectionList_contentInset />;
   },
-};
+} as RNTesterModuleExample;

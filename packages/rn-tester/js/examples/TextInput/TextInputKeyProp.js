@@ -5,14 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @format
- * @flow
+ * @flow strict-local
  */
 
 'use strict';
 
-const React = require('react');
-const {View, TextInput} = require('react-native');
-const {useEffect, useState} = React;
+import React, {useEffect, useState} from 'react';
+import {TextInput, View} from 'react-native';
 
 function TextInputKeyProp() {
   const [startKey, setStartKey] = useState(0);

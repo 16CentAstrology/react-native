@@ -8,25 +8,27 @@
  * @flow strict-local
  */
 
+import type {ViewProps} from 'react-native/Libraries/Components/View/ViewPropTypes';
+import type {HostComponent} from 'react-native/Libraries/Renderer/shims/ReactNativeTypes';
 import type {
-  Int32,
   BubblingEventHandler,
+  Int32,
   WithDefault,
-} from '../../../../../Libraries/Types/CodegenTypes';
-import type {ViewProps} from '../../../../../Libraries/Components/View/ViewPropTypes';
-import codegenNativeComponent from '../../../../../Libraries/Utilities/codegenNativeComponent';
-import type {HostComponent} from '../../../../../Libraries/Renderer/shims/ReactNativeTypes';
+} from 'react-native/Libraries/Types/CodegenTypes';
 
-type OnChangeEvent = $ReadOnly<{|
+import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
+
+type OnChangeEvent = $ReadOnly<{
   location: {
     source: {url: string, ...},
     x: Int32,
     y: Int32,
+    arrayOfObjects: $ReadOnlyArray<{value: $ReadOnly<{str: string}>}>,
     ...
   },
-|}>;
+}>;
 
-type NativeProps = $ReadOnly<{|
+type NativeProps = $ReadOnly<{
   ...ViewProps,
 
   // Props
@@ -34,7 +36,7 @@ type NativeProps = $ReadOnly<{|
 
   // Events
   onChange?: ?BubblingEventHandler<OnChangeEvent>,
-|}>;
+}>;
 
 export default (codegenNativeComponent<NativeProps>(
   'EventNestedObjectPropsNativeComponentView',

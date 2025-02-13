@@ -10,19 +10,19 @@
 
 'use strict';
 import type {CommandParamTypeAnnotation} from '../../CodegenSchema';
-
 import type {
-  NamedShape,
   CommandTypeAnnotation,
   ComponentShape,
+  NamedShape,
   PropTypeAnnotation,
   SchemaType,
 } from '../../CodegenSchema';
+
 const {
-  getImports,
-  toSafeJavaString,
-  getInterfaceJavaClassName,
   getDelegateJavaClassName,
+  getImports,
+  getInterfaceJavaClassName,
+  toSafeJavaString,
 } = require('./JavaHelpers');
 
 // File path -> contents
@@ -55,7 +55,7 @@ package ${packageName};
 
 ${imports}
 
-public class ${className}<T extends ${extendClasses}, U extends BaseViewManagerInterface<T> & ${interfaceClassName}<T>> extends BaseViewManagerDelegate<T, U> {
+public class ${className}<T extends ${extendClasses}, U extends BaseViewManager<T, ? extends LayoutShadowNode> & ${interfaceClassName}<T>> extends BaseViewManagerDelegate<T, U> {
   public ${className}(U viewManager) {
     super(viewManager);
   }
@@ -74,7 +74,7 @@ const PropSetterTemplate = ({propCases}: {propCases: string}) =>
 const CommandsTemplate = ({commandCases}: {commandCases: string}) =>
   `
   @Override
-  public void receiveCommand(T view, String commandName, ReadableArray args) {
+  public void receiveCommand(T view, String commandName, @Nullable ReadableArray args) {
     switch (commandName) {
       ${commandCases}
     }
@@ -128,6 +128,8 @@ function getJavaValueForProp(
           return '(ReadableMap) value';
         case 'EdgeInsetsPrimitive':
           return '(ReadableMap) value';
+        case 'DimensionPrimitive':
+          return 'DimensionPropConverter.getDimension(value)';
         default:
           (typeAnnotation.name: empty);
           throw new Error('Received unknown ReservedPropTypeAnnotation');
@@ -142,6 +144,8 @@ function getJavaValueForProp(
       return '(String) value';
     case 'Int32EnumTypeAnnotation':
       return `value == null ? ${typeAnnotation.default} : ((Double) value).intValue()`;
+    case 'MixedTypeAnnotation':
+      return 'new DynamicFromObject(value)';
     default:
       (typeAnnotation: empty);
       throw new Error('Received invalid typeAnnotation');
@@ -198,6 +202,8 @@ function getCommandArgJavaType(
       return `args.getInt(${index})`;
     case 'StringTypeAnnotation':
       return `args.getString(${index})`;
+    case 'ArrayTypeAnnotation':
+      return `args.getArray(${index})`;
     default:
       (typeAnnotation.type: empty);
       throw new Error(`Receieved invalid type: ${typeAnnotation.type}`);
@@ -266,7 +272,8 @@ function getDelegateImports(component: ComponentShape) {
   }
   imports.add('import androidx.annotation.Nullable;');
   imports.add('import com.facebook.react.uimanager.BaseViewManagerDelegate;');
-  imports.add('import com.facebook.react.uimanager.BaseViewManagerInterface;');
+  imports.add('import com.facebook.react.uimanager.BaseViewManager;');
+  imports.add('import com.facebook.react.uimanager.LayoutShadowNode;');
 
   return imports;
 }
@@ -291,6 +298,7 @@ module.exports = {
     schema: SchemaType,
     packageName?: string,
     assumeNonnull: boolean = false,
+    headerPrefix?: string,
   ): FilesOutput {
     // TODO: This doesn't support custom package name yet.
     const normalizedPackageName = 'com.facebook.react.viewmanagers';

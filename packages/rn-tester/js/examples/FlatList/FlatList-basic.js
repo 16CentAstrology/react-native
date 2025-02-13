@@ -10,11 +10,28 @@
 
 'use strict';
 
-import type {AnimatedComponentType} from 'react-native/Libraries/Animated/createAnimatedComponent';
-import typeof FlatListType from 'react-native/Libraries/Lists/FlatList';
-import type {RenderItemProps} from 'react-native/Libraries/Lists/VirtualizedListProps';
-
+import type {Item} from '../../components/ListExampleShared';
 import type {RNTesterModuleExample} from '../../types/RNTesterTypes';
+import type FlatList from 'react-native/Libraries/Lists/FlatList';
+import type {ListRenderItemInfo} from 'react-native/Libraries/Lists/VirtualizedList';
+
+import {
+  FooterComponent,
+  HeaderComponent,
+  ItemComponent,
+  ItemSeparatorComponent,
+  ListEmptyComponent,
+  LoadingComponent,
+  PlainInput,
+  SeparatorComponent,
+  Spindicator,
+  genNewerItems,
+  genOlderItems,
+  getItemLayout,
+  pressItem,
+  renderSmallSwitchOption,
+} from '../../components/ListExampleShared';
+import RNTesterPage from '../../components/RNTesterPage';
 import * as React from 'react';
 import {
   Alert,
@@ -25,24 +42,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import RNTesterPage from '../../components/RNTesterPage';
 import infoLog from 'react-native/Libraries/Utilities/infoLog';
-import {
-  FooterComponent,
-  HeaderComponent,
-  ItemComponent,
-  ListEmptyComponent,
-  ItemSeparatorComponent,
-  PlainInput,
-  SeparatorComponent,
-  Spindicator,
-  genItemData,
-  getItemLayout,
-  pressItem,
-  renderSmallSwitchOption,
-} from '../../components/ListExampleShared';
 
-import type {Item} from '../../components/ListExampleShared';
+const PAGE_SIZE = 100;
+const NUM_PAGES = 10;
+const INITIAL_PAGE_OFFSET = Math.floor(NUM_PAGES / 2);
+const LOAD_TIME = 2000;
 
 const VIEWABILITY_CONFIG = {
   minimumViewTime: 3000,
@@ -50,9 +55,11 @@ const VIEWABILITY_CONFIG = {
   waitForInteraction: true,
 };
 
-type Props = $ReadOnly<{||}>;
-type State = {|
+type Props = $ReadOnly<{}>;
+type State = {
   data: Array<Item>,
+  first: number,
+  last: number,
   debug: boolean,
   horizontal: boolean,
   inverted: boolean,
@@ -66,13 +73,18 @@ type State = {|
   onPressDisabled: boolean,
   textSelectable: boolean,
   isRTL: boolean,
-|};
+  maintainVisibleContentPosition: boolean,
+  previousLoading: boolean,
+  nextLoading: boolean,
+};
 
 const IS_RTL = I18nManager.isRTL;
 
 class FlatListExample extends React.PureComponent<Props, State> {
   state: State = {
-    data: genItemData(100),
+    data: genNewerItems(PAGE_SIZE, PAGE_SIZE * INITIAL_PAGE_OFFSET),
+    first: PAGE_SIZE * INITIAL_PAGE_OFFSET,
+    last: PAGE_SIZE + PAGE_SIZE * INITIAL_PAGE_OFFSET,
     debug: false,
     horizontal: false,
     inverted: false,
@@ -86,6 +98,9 @@ class FlatListExample extends React.PureComponent<Props, State> {
     onPressDisabled: false,
     textSelectable: true,
     isRTL: IS_RTL,
+    maintainVisibleContentPosition: true,
+    previousLoading: false,
+    nextLoading: false,
   };
 
   /* $FlowFixMe[missing-local-annot] The type annotation(s) required by Flow's
@@ -116,6 +131,7 @@ class FlatListExample extends React.PureComponent<Props, State> {
   }
 
   _setBooleanValue: string => boolean => void = key => value =>
+    // $FlowFixMe[incompatible-call]
     this.setState({[key]: value});
 
   _setIsRTL: boolean => void = value => {
@@ -136,14 +152,12 @@ class FlatListExample extends React.PureComponent<Props, State> {
     const filteredData = this.state.data.filter(filter);
     const flatListItemRendererProps = this._renderItemComponent();
     return (
-      <RNTesterPage
-        noSpacer={true}
-        noScroll={true}
-        title="Simple list of items">
+      <RNTesterPage noScroll={true} title="Simple list of items">
         <View style={styles.container}>
           <View style={styles.searchRow}>
             <View style={styles.options}>
               <PlainInput
+                testID="search_bar_flat_list"
                 onChangeText={this._onChangeFilterText}
                 placeholder="Search..."
                 value={this.state.filterText}
@@ -183,6 +197,7 @@ class FlatListExample extends React.PureComponent<Props, State> {
                 'Empty',
                 this.state.empty,
                 this._setBooleanValue('empty'),
+                'switch_empty_option',
               )}
               {renderSmallSwitchOption(
                 'Debug',
@@ -209,6 +224,11 @@ class FlatListExample extends React.PureComponent<Props, State> {
                 this.state.isRTL,
                 this._setIsRTL,
               )}
+              {renderSmallSwitchOption(
+                'Maintain content position',
+                this.state.maintainVisibleContentPosition,
+                this._setBooleanValue('maintainVisibleContentPosition'),
+              )}
               {Platform.OS === 'android' && (
                 <View>
                   <TextInput
@@ -229,10 +249,17 @@ class FlatListExample extends React.PureComponent<Props, State> {
           <SeparatorComponent />
           <Animated.FlatList
             fadingEdgeLength={this.state.fadingEdgeLength}
-            ItemSeparatorComponent={ItemSeparatorComponent}
-            ListHeaderComponent={<HeaderComponent />}
-            ListFooterComponent={FooterComponent}
+            ItemSeparatorComponent={
+              this.state.horizontal ? null : ItemSeparatorComponent
+            }
+            ListHeaderComponent={
+              this.state.previousLoading ? LoadingComponent : HeaderComponent
+            }
+            ListFooterComponent={
+              this.state.nextLoading ? LoadingComponent : FooterComponent
+            }
             ListEmptyComponent={ListEmptyComponent}
+            // $FlowFixMe[missing-empty-array-annot]
             data={this.state.empty ? [] : filteredData}
             debug={this.state.debug}
             disableVirtualization={!this.state.virtualized}
@@ -249,43 +276,72 @@ class FlatListExample extends React.PureComponent<Props, State> {
             keyboardShouldPersistTaps="always"
             keyboardDismissMode="on-drag"
             numColumns={1}
+            onStartReached={this._onStartReached}
+            initialScrollIndex={Math.floor(PAGE_SIZE / 2)}
             onEndReached={this._onEndReached}
             onRefresh={this._onRefresh}
             onScroll={
               this.state.horizontal ? this._scrollSinkX : this._scrollSinkY
             }
+            onScrollToIndexFailed={this._onScrollToIndexFailed}
             onViewableItemsChanged={this._onViewableItemsChanged}
             ref={this._captureRef}
             refreshing={false}
             contentContainerStyle={styles.list}
             viewabilityConfig={VIEWABILITY_CONFIG}
+            maintainVisibleContentPosition={
+              this.state.maintainVisibleContentPosition
+                ? {minIndexForVisible: 0}
+                : undefined
+            }
             {...flatListItemRendererProps}
           />
         </View>
       </RNTesterPage>
     );
   }
-  _captureRef = (
-    ref: React.ElementRef<
-      AnimatedComponentType<
-        React.ElementConfig<FlatListType>,
-        React.ElementRef<FlatListType>,
-      >,
-    > | null,
-  ) => {
+  _captureRef = (ref: FlatList<mixed> | null) => {
     this._listRef = ref;
   };
   // $FlowFixMe[missing-local-annot]
   _getItemLayout = (data: any, index: number) => {
     return getItemLayout(data, index, this.state.horizontal);
   };
-  _onEndReached = () => {
-    if (this.state.data.length >= 1000) {
+  _onStartReached = () => {
+    if (
+      this.state.empty ||
+      this.state.first <= 0 ||
+      this.state.previousLoading
+    ) {
       return;
     }
-    this.setState(state => ({
-      data: state.data.concat(genItemData(100, state.data.length)),
-    }));
+
+    this.setState({previousLoading: true});
+    setTimeout(() => {
+      this.setState(state => ({
+        previousLoading: false,
+        data: genOlderItems(PAGE_SIZE, state.first).concat(state.data),
+        first: state.first - PAGE_SIZE,
+      }));
+    }, LOAD_TIME);
+  };
+  _onEndReached = () => {
+    if (
+      this.state.empty ||
+      this.state.last >= PAGE_SIZE * NUM_PAGES ||
+      this.state.nextLoading
+    ) {
+      return;
+    }
+
+    this.setState({nextLoading: true});
+    setTimeout(() => {
+      this.setState(state => ({
+        nextLoading: false,
+        data: state.data.concat(genNewerItems(PAGE_SIZE, state.last)),
+        last: state.last + PAGE_SIZE,
+      }));
+    }, LOAD_TIME);
   };
   // $FlowFixMe[missing-local-annot]
   _onPressCallback = () => {
@@ -298,9 +354,10 @@ class FlatListExample extends React.PureComponent<Props, State> {
   _onRefresh = () => Alert.alert('onRefresh: nothing to refresh :P');
   // $FlowFixMe[missing-local-annot]
   _renderItemComponent = () => {
-    const renderProp = ({item, separators}: RenderItemProps<Item>) => {
+    const renderProp = ({item, separators}: ListRenderItemInfo<Item>) => {
       return (
         <ItemComponent
+          testID={`item_${item.key}`}
           item={item}
           horizontal={this.state.horizontal}
           fixedHeight={this.state.fixedHeight}
@@ -318,6 +375,19 @@ class FlatListExample extends React.PureComponent<Props, State> {
         }
       : {renderItem: renderProp};
   };
+
+  _onScrollToIndexFailed = ({
+    index,
+    highestMeasuredFrameIndex,
+  }: {
+    index: number,
+    highestMeasuredFrameIndex: number,
+  }) => {
+    console.warn(
+      `failed to scroll to index: ${index} (measured up to ${highestMeasuredFrameIndex})`,
+    );
+  };
+
   // This is called when items change viewability by scrolling into or out of
   // the viewable area.
   _onViewableItemsChanged = (info: {
@@ -342,7 +412,7 @@ class FlatListExample extends React.PureComponent<Props, State> {
 
   _pressItem = (key: string) => {
     this._listRef?.recordInteraction();
-    const index = Number(key);
+    const index = this.state.data.findIndex(item => item.key === key);
     const itemState = pressItem(this.state.data[index]);
     this.setState(state => ({
       ...state,
@@ -354,7 +424,7 @@ class FlatListExample extends React.PureComponent<Props, State> {
     }));
   };
 
-  _listRef: React.ElementRef<typeof Animated.FlatList> | null;
+  _listRef: FlatList<mixed> | null;
 }
 
 const styles = StyleSheet.create({

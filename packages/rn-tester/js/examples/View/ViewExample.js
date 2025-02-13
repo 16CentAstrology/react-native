@@ -10,19 +10,15 @@
 
 'use strict';
 
-const React = require('react');
+import type {RNTesterModule} from '../../types/RNTesterTypes';
 
-const {
-  StyleSheet,
-  Text,
-  TouchableWithoutFeedback,
-  View,
-  Platform,
-} = require('react-native');
+import RNTesterText from '../../components/RNTesterText';
+import * as React from 'react';
+import {Platform, Pressable, StyleSheet, View} from 'react-native';
 
 class ViewBorderStyleExample extends React.Component<
-  $ReadOnly<{||}>,
-  {|showBorder: boolean|},
+  $ReadOnly<{}>,
+  {showBorder: boolean},
 > {
   state: {showBorder: boolean} = {
     showBorder: true,
@@ -30,7 +26,7 @@ class ViewBorderStyleExample extends React.Component<
 
   render(): React.Node {
     return (
-      <TouchableWithoutFeedback onPress={this._handlePress}>
+      <Pressable testID="border-style-button" onPress={this._handlePress}>
         <View>
           <View
             style={[
@@ -44,7 +40,9 @@ class ViewBorderStyleExample extends React.Component<
                   }
                 : null,
             ]}>
-            <Text style={{fontSize: 11}}>Dashed border style</Text>
+            <RNTesterText style={{fontSize: 11}}>
+              Dashed border style
+            </RNTesterText>
           </View>
           <View
             style={[
@@ -60,10 +58,12 @@ class ViewBorderStyleExample extends React.Component<
                   }
                 : null,
             ]}>
-            <Text style={{fontSize: 11}}>Dotted border style</Text>
+            <RNTesterText style={{fontSize: 11}}>
+              Dotted border style
+            </RNTesterText>
           </View>
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
     );
   }
 
@@ -82,10 +82,10 @@ const offscreenAlphaCompositingStyles = StyleSheet.create({
 });
 
 class OffscreenAlphaCompositing extends React.Component<
-  $ReadOnly<{||}>,
-  {|
+  $ReadOnly<{testID?: ?string}>,
+  {
     active: boolean,
-  |},
+  },
 > {
   state: {active: boolean} = {
     active: false,
@@ -93,9 +93,11 @@ class OffscreenAlphaCompositing extends React.Component<
 
   render(): React.Node {
     return (
-      <TouchableWithoutFeedback onPress={this._handlePress}>
+      <Pressable
+        testID="offscreen-alpha-compositing-button"
+        onPress={this._handlePress}>
         <View>
-          <Text style={{paddingBottom: 10}}>Blobs</Text>
+          <RNTesterText style={{paddingBottom: 10}}>Blobs</RNTesterText>
           <View
             style={{opacity: 1.0, paddingBottom: 30}}
             needsOffscreenAlphaCompositing={this.state.active}>
@@ -116,13 +118,13 @@ class OffscreenAlphaCompositing extends React.Component<
               ]}
             />
           </View>
-          <Text style={{paddingBottom: 10}}>
+          <RNTesterText style={{paddingBottom: 10}}>
             Same blobs, but their shared container have 0.5 opacity
-          </Text>
-          <Text style={{paddingBottom: 10}}>
+          </RNTesterText>
+          <RNTesterText style={{paddingBottom: 10}}>
             Tap to {this.state.active ? 'activate' : 'deactivate'}{' '}
             needsOffscreenAlphaCompositing
-          </Text>
+          </RNTesterText>
           <View
             style={{opacity: 0.8}}
             needsOffscreenAlphaCompositing={this.state.active}>
@@ -144,7 +146,7 @@ class OffscreenAlphaCompositing extends React.Component<
             />
           </View>
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
     );
   }
 
@@ -164,10 +166,10 @@ const ZIndexExampleStyles = StyleSheet.create({
 });
 
 class ZIndexExample extends React.Component<
-  $ReadOnly<{||}>,
-  {|
+  $ReadOnly<{}>,
+  {
     flipped: boolean,
-  |},
+  },
 > {
   state: {flipped: boolean} = {
     flipped: false,
@@ -176,9 +178,11 @@ class ZIndexExample extends React.Component<
   render(): React.Node {
     const indices = this.state.flipped ? [-1, 0, 1, 2] : [2, 1, 0, -1];
     return (
-      <TouchableWithoutFeedback onPress={this._handlePress}>
+      <Pressable testID="z-index-button" onPress={this._handlePress}>
         <View>
-          <Text style={{paddingBottom: 10}}>Tap to flip sorting order</Text>
+          <RNTesterText style={{paddingBottom: 10}}>
+            Tap to flip sorting order
+          </RNTesterText>
           <View
             style={[
               ZIndexExampleStyles.zIndex,
@@ -188,7 +192,7 @@ class ZIndexExample extends React.Component<
                 zIndex: indices[0],
               },
             ]}>
-            <Text>ZIndex {indices[0]}</Text>
+            <RNTesterText>ZIndex {indices[0]}</RNTesterText>
           </View>
           <View
             style={[
@@ -199,7 +203,7 @@ class ZIndexExample extends React.Component<
                 zIndex: indices[1],
               },
             ]}>
-            <Text>ZIndex {indices[1]}</Text>
+            <RNTesterText>ZIndex {indices[1]}</RNTesterText>
           </View>
           <View
             style={[
@@ -210,7 +214,7 @@ class ZIndexExample extends React.Component<
                 zIndex: indices[2],
               },
             ]}>
-            <Text>ZIndex {indices[2]}</Text>
+            <RNTesterText>ZIndex {indices[2]}</RNTesterText>
           </View>
           <View
             style={[
@@ -221,10 +225,10 @@ class ZIndexExample extends React.Component<
                 zIndex: indices[3],
               },
             ]}>
-            <Text>ZIndex {indices[3]}</Text>
+            <RNTesterText>ZIndex {indices[3]}</RNTesterText>
           </View>
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
     );
   }
 
@@ -233,11 +237,83 @@ class ZIndexExample extends React.Component<
   };
 }
 
+function PositionStaticZIndexExample(): React.Node {
+  return (
+    <View
+      testID="view-test-zindex-with-static"
+      style={{backgroundColor: 'yellow', flexDirection: 'row'}}>
+      <View
+        style={{
+          backgroundColor: 'red',
+          width: 100,
+          height: 100,
+          position: 'relative',
+          left: 10,
+        }}>
+        <View
+          style={{
+            backgroundColor: 'purple',
+            width: 50,
+            height: 50,
+            top: 30,
+            left: 65,
+            position: 'relative',
+          }}
+        />
+      </View>
+      <View
+        style={{
+          backgroundColor: 'blue',
+          width: 100,
+          height: 100,
+          zIndex: 100,
+          position: 'static',
+        }}>
+        <View
+          style={{
+            backgroundColor: 'orange',
+            width: 50,
+            height: 50,
+            top: 10,
+            position: 'relative',
+          }}
+        />
+        <View
+          style={{
+            backgroundColor: 'brown',
+            width: 50,
+            height: 50,
+            position: 'static',
+          }}>
+          <View
+            style={{
+              backgroundColor: 'black',
+              width: 25,
+              height: 25,
+              top: -10,
+              position: 'relative',
+            }}
+          />
+        </View>
+      </View>
+      <View
+        style={{
+          backgroundColor: 'green',
+          width: 100,
+          height: 100,
+          position: 'relative',
+          left: -20,
+        }}
+      />
+    </View>
+  );
+}
+
 class DisplayNoneStyle extends React.Component<
-  $ReadOnly<{||}>,
-  {|
+  $ReadOnly<{}>,
+  {
     index: number,
-  |},
+  },
 > {
   state: {index: number} = {
     index: 0,
@@ -245,11 +321,11 @@ class DisplayNoneStyle extends React.Component<
 
   render(): React.Node {
     return (
-      <TouchableWithoutFeedback onPress={this._handlePress}>
+      <Pressable testID="display-none-button" onPress={this._handlePress}>
         <View>
-          <Text style={{paddingBottom: 10}}>
+          <RNTesterText style={{paddingBottom: 10}}>
             Press to toggle `display: none`
-          </Text>
+          </RNTesterText>
           <View
             style={{
               height: 50,
@@ -291,7 +367,7 @@ class DisplayNoneStyle extends React.Component<
             }}
           />
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
     );
   }
 
@@ -300,10 +376,11 @@ class DisplayNoneStyle extends React.Component<
   };
 }
 
-class FlexGapExample extends React.Component<$ReadOnly<{||}>> {
+class FlexGapExample extends React.Component<$ReadOnly<{testID?: ?string}>> {
   render(): React.Node {
     return (
       <View
+        testID={this.props.testID}
         style={{
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -333,323 +410,926 @@ class FlexGapExample extends React.Component<$ReadOnly<{||}>> {
   }
 }
 
-exports.title = 'View';
-exports.documentationURL = 'https://reactnative.dev/docs/view';
-exports.category = 'Basic';
-exports.description = ('Basic building block of all UI, examples that ' +
-  'demonstrate some of the many styles available.': string);
+function BoxShadowExample(): React.Node {
+  const defaultStyleSize = {width: 75, height: 75};
 
-exports.displayName = 'ViewExample';
-exports.examples = [
-  {
-    title: 'Background Color',
-    render(): React.Node {
-      return (
-        <View style={{backgroundColor: '#527FE4', padding: 5}}>
-          <Text style={{fontSize: 11}}>Blue background</Text>
-        </View>
-      );
-    },
-  },
-  {
-    title: 'Border',
-    render(): React.Node {
-      return (
-        <View style={{borderColor: '#527FE4', borderWidth: 5, padding: 10}}>
-          <Text style={{fontSize: 11}}>5px blue border</Text>
-        </View>
-      );
-    },
-  },
-  {
-    title: 'Padding/Margin',
-    render(): React.Node {
-      const styles = StyleSheet.create({
-        box: {
-          backgroundColor: '#527FE4',
-          borderColor: '#000033',
-          borderWidth: 1,
-        },
-      });
-      return (
-        <View style={{borderColor: '#bb0000', borderWidth: 0.5}}>
-          <View style={[styles.box, {padding: 5}]}>
-            <Text style={{fontSize: 11}}>5px padding</Text>
-          </View>
-          <View style={[styles.box, {margin: 5}]}>
-            <Text style={{fontSize: 11}}>5px margin</Text>
-          </View>
-          <View
-            style={[
-              styles.box,
-              {margin: 5, padding: 5, alignSelf: 'flex-start'},
-            ]}>
-            <Text style={{fontSize: 11}}>5px margin and padding,</Text>
-            <Text style={{fontSize: 11}}>widthAutonomous=true</Text>
-          </View>
-        </View>
-      );
-    },
-  },
-  {
-    title: 'Border Radius',
-    render(): React.Node {
-      return (
-        <>
-          <View style={{borderWidth: 0.5, borderRadius: 5, padding: 5}}>
-            <Text style={{fontSize: 11}}>
-              Too much use of `borderRadius` (especially large radii) on
-              anything which is scrolling may result in dropped frames. Use
-              sparingly.
-            </Text>
-          </View>
-          {Platform.OS === 'ios' && (
-            <View
-              style={{
-                borderRadius: 20,
-                padding: 8,
-                marginTop: 12,
-                backgroundColor: '#527FE4',
-                borderCurve: 'continuous',
-              }}>
-              <Text style={{fontSize: 16, color: 'white'}}>
-                View with continuous border curve
-              </Text>
-            </View>
-          )}
-        </>
-      );
-    },
-  },
-  {
-    title: 'Border Style',
-    render(): React.Node {
-      return <ViewBorderStyleExample />;
-    },
-  },
-  {
-    title: 'Rounded Borders',
-    render(): React.Node {
-      return (
-        <View style={{flexDirection: 'row'}}>
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              borderWidth: 1,
-              marginRight: 10,
-            }}
-          />
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              borderWidth: 10,
-              marginRight: 10,
-            }}
-          />
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderTopLeftRadius: 5,
-              borderTopRightRadius: 10,
-              borderBottomRightRadius: 25,
-              borderBottomLeftRadius: 50,
-              borderWidth: 1,
-              marginRight: 10,
-            }}
-          />
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderTopLeftRadius: 5,
-              borderTopRightRadius: 10,
-              borderBottomRightRadius: 25,
-              borderBottomLeftRadius: 50,
-              borderWidth: 10,
-              marginRight: 10,
-            }}
-          />
-        </View>
-      );
-    },
-  },
-  {
-    title: 'Overflow',
-    render(): React.Node {
-      const styles = StyleSheet.create({
-        container: {
-          borderWidth: StyleSheet.hairlineWidth,
-          height: 12,
-          marginBottom: 8,
-          marginEnd: 16,
-          width: 95,
-        },
-        content: {
-          height: 20,
-          width: 200,
-        },
-      });
-
-      // NOTE: The <View> that sets `overflow` should only have other layout
-      // styles so that we can accurately test view flattening optimizations.
-      return (
-        <View style={{flexDirection: 'row'}}>
-          <View style={styles.container}>
-            <View style={[StyleSheet.absoluteFill]}>
-              <Text style={styles.content}>undefined</Text>
-            </View>
-          </View>
-          <View style={styles.container}>
-            <View style={[StyleSheet.absoluteFill, {overflow: 'hidden'}]}>
-              <Text style={styles.content}>hidden</Text>
-            </View>
-          </View>
-          <View style={styles.container}>
-            <View style={[StyleSheet.absoluteFill, {overflow: 'visible'}]}>
-              <Text style={styles.content}>visible</Text>
-            </View>
-          </View>
-        </View>
-      );
-    },
-  },
-  {
-    title: 'Opacity',
-    render(): React.Node {
-      return (
-        <View>
-          <View style={{opacity: 0}}>
-            <Text>Opacity 0</Text>
-          </View>
-          <View style={{opacity: 0.1}}>
-            <Text>Opacity 0.1</Text>
-          </View>
-          <View style={{opacity: 0.3}}>
-            <Text>Opacity 0.3</Text>
-          </View>
-          <View style={{opacity: 0.5}}>
-            <Text>Opacity 0.5</Text>
-          </View>
-          <View style={{opacity: 0.7}}>
-            <Text>Opacity 0.7</Text>
-          </View>
-          <View style={{opacity: 0.9}}>
-            <Text>Opacity 0.9</Text>
-          </View>
-          <View style={{opacity: 1}}>
-            <Text>Opacity 1</Text>
-          </View>
-        </View>
-      );
-    },
-  },
-  {
-    title: 'Offscreen Alpha Compositing',
-    render(): React.Node {
-      return <OffscreenAlphaCompositing />;
-    },
-  },
-  {
-    title: 'ZIndex',
-    render(): React.Node {
-      return <ZIndexExample />;
-    },
-  },
-  {
-    title: '`display: none` style',
-    render(): React.Node {
-      return <DisplayNoneStyle />;
-    },
-  },
-  {
-    title: 'BackfaceVisibility',
-    render: function (): React.Node {
-      return (
-        <>
-          <Text style={{paddingBottom: 10}}>
-            View #1, front is visible, back is hidden.
-          </Text>
-          <View style={{justifyContent: 'center', alignItems: 'center'}}>
-            <View
-              style={{
-                height: 200,
-                width: 200,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: 'blue',
-                backfaceVisibility: 'hidden',
-              }}>
-              <Text>Front</Text>
-            </View>
-            <View
-              style={{
-                height: 200,
-                width: 200,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: 'red',
-                backfaceVisibility: 'hidden',
-                transform: [{rotateY: '180deg'}],
-                position: 'absolute',
-                top: 0,
-              }}>
-              <Text>Back (You should not see this)</Text>
-            </View>
-          </View>
-          <Text style={{paddingVertical: 10}}>
-            View #2, front is hidden, back is visible.
-          </Text>
-          <View style={{justifyContent: 'center', alignItems: 'center'}}>
-            <View
-              style={{
-                height: 200,
-                width: 200,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: 'blue',
-                backfaceVisibility: 'hidden',
-              }}>
-              <Text>Front (You should not see this)</Text>
-            </View>
-            <View
-              style={{
-                height: 200,
-                width: 200,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: 'red',
-                backfaceVisibility: 'hidden',
-                position: 'absolute',
-                top: 0,
-              }}>
-              <Text>Back</Text>
-            </View>
-          </View>
-        </>
-      );
-    },
-  },
-  {
-    title: 'View with aria-label="label"',
-    render(): React.Node {
-      return (
+  return (
+    <View testID="view-test-box-shadow" style={{gap: 20}}>
+      <View style={{flexDirection: 'row', gap: 15}}>
         <View
-          aria-label="Blue background View with Text"
-          style={{backgroundColor: '#527FE4', padding: 5}}>
-          <Text style={{fontSize: 11}}>Blue background</Text>
+          style={{
+            ...defaultStyleSize,
+            borderRadius: 10,
+            borderWidth: 5,
+            borderColor: 'red',
+            boxShadow: '0 0 10px 0 black',
+          }}
+        />
+        <View
+          style={{
+            ...defaultStyleSize,
+            borderRadius: 30,
+            borderWidth: 5,
+            borderColor: 'red',
+            boxShadow: 'inset 0 0 10px 0 black',
+          }}
+        />
+        <View
+          style={{
+            ...defaultStyleSize,
+            borderRadius: 30,
+            borderWidth: 5,
+            borderColor: 'red',
+            boxShadow:
+              'inset 15px -5px 5px 5px cyan, inset 15px -5px 20px 10px orange, -5px 5px 5px 0px green, 0px -10px 0px 5px black',
+          }}
+        />
+      </View>
+      <View style={{flexDirection: 'row', gap: 15}}>
+        <View
+          style={{
+            ...defaultStyleSize,
+            boxShadow: '0px 0px 5px 5px black',
+          }}>
+          <View
+            style={{
+              left: -10,
+              width: 25,
+              height: 25,
+              backgroundColor: 'cyan',
+            }}
+          />
         </View>
-      );
+        <View
+          style={{
+            ...defaultStyleSize,
+            backgroundColor: 'red',
+            boxShadow: 'inset 0px 0px 5px 5px black',
+          }}
+        />
+        <View style={{...defaultStyleSize, flexDirection: 'row'}}>
+          <View style={{width: 25, height: 25, backgroundColor: 'cyan'}} />
+          <View
+            style={{
+              ...defaultStyleSize,
+              boxShadow: ' 0px 0px 20px 5px black',
+            }}
+          />
+          <View style={{width: 25, height: 25, backgroundColor: 'cyan'}} />
+        </View>
+      </View>
+      <View style={{flexDirection: 'row', gap: 15}}>
+        <View
+          style={{
+            ...defaultStyleSize,
+            backgroundColor: 'green',
+            boxShadow: '0px 10px',
+          }}
+        />
+        <View
+          style={{
+            ...defaultStyleSize,
+            backgroundColor: 'orange',
+            boxShadow: '5px 5px 5px 0px rgba(0, 0, 0, 0)',
+          }}
+        />
+        <View
+          style={[
+            defaultStyleSize,
+            {
+              backgroundColor: 'brown',
+              boxShadow: '5px 5px 5px 0px rgba(0, 0, 255, 1) inset',
+              transform: [{scale: 1.2}],
+            },
+          ]}
+        />
+      </View>
+    </View>
+  );
+}
+
+function OutlineExample(): React.Node {
+  const defaultStyleSize = {width: 50, height: 50};
+
+  return (
+    <View
+      testID="view-test-outline"
+      style={{
+        padding: 10,
+        flexDirection: 'row',
+        gap: 20,
+        margin: 10,
+        flexWrap: 'wrap',
+      }}>
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            borderColor: 'red',
+            borderWidth: 8,
+            outlineWidth: 8,
+            outlineColor: 'purple',
+          },
+        ]}
+      />
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            borderColor: 'red',
+            borderWidth: 8,
+            outlineWidth: 8,
+            borderRadius: 20,
+            outlineColor: 'purple',
+          },
+        ]}
+      />
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            borderColor: 'red',
+            borderWidth: 8,
+            outlineWidth: 8,
+            borderTopLeftRadius: 20,
+            borderBottomRightRadius: 20,
+            outlineColor: 'purple',
+          },
+        ]}
+      />
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            borderColor: 'green',
+            borderWidth: 8,
+            outlineWidth: 8,
+            outlineColor: 'orange',
+            outlineStyle: 'solid',
+            outlineOffset: 5,
+            marginLeft: 5,
+          },
+        ]}
+      />
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            borderColor: 'green',
+            borderWidth: 8,
+            outlineWidth: 8,
+            borderRadius: 20,
+            outlineColor: 'orange',
+            outlineStyle: 'dotted',
+          },
+        ]}
+      />
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            borderColor: 'green',
+            borderWidth: 8,
+            outlineWidth: 8,
+            borderTopLeftRadius: 20,
+            borderBottomRightRadius: 20,
+            outlineColor: 'orange',
+            outlineStyle: 'dashed',
+          },
+        ]}
+      />
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            width: 100,
+            borderColor: 'green',
+            borderWidth: 8,
+            outlineWidth: 8,
+            borderRadius: '100%',
+            outlineColor: 'orange',
+          },
+        ]}
+      />
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            borderColor: 'green',
+            borderWidth: 12,
+            outlineWidth: 4,
+            outlineOffset: -8,
+            outlineColor: 'orange',
+          },
+        ]}
+      />
+      <View
+        style={[
+          defaultStyleSize,
+          {
+            outlineWidth: 9,
+            outlineColor: 'orange',
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+function BoxSizingExample(): React.Node {
+  const styles = StyleSheet.create({
+    boxSizingBox: {
+      padding: 5,
+      backgroundColor: 'green',
+      borderWidth: 5,
+      margin: 10,
+      width: 50,
+      height: 25,
     },
-  },
-  {
-    title: 'FlexGap',
-    render(): React.Node {
-      return <FlexGapExample />;
+    boxSizingChild: {
+      backgroundColor: 'red',
+      width: '100%',
+      height: '100%',
     },
-  },
-];
+  });
+
+  return (
+    <View testID={'view-test-box-sizing'}>
+      <RNTesterText>Content box 50x25</RNTesterText>
+      <View style={[styles.boxSizingBox, {boxSizing: 'content-box'}]}>
+        <View style={styles.boxSizingChild} />
+      </View>
+      <RNTesterText>Border box 50x25</RNTesterText>
+      <View style={[styles.boxSizingBox, {boxSizing: 'border-box'}]}>
+        <View style={styles.boxSizingChild} />
+      </View>
+    </View>
+  );
+}
+
+export default ({
+  title: 'View',
+  documentationURL: 'https://reactnative.dev/docs/view',
+  category: 'Basic',
+  description: ('Basic building block of all UI, examples that ' +
+    'demonstrate some of the many styles available.': string),
+  displayName: 'ViewExample',
+  examples: [
+    {
+      title: 'Background Color',
+      name: 'background-color',
+      render(): React.Node {
+        return (
+          <View
+            testID="view-test-background-color"
+            style={{backgroundColor: '#527FE4', padding: 5}}>
+            <RNTesterText style={{fontSize: 11}}>Blue background</RNTesterText>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Border',
+      name: 'border',
+      render(): React.Node {
+        return (
+          <View
+            testID="view-test-border"
+            style={{borderColor: '#527FE4', borderWidth: 5, padding: 10}}>
+            <RNTesterText style={{fontSize: 11}}>5px blue border</RNTesterText>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Padding/Margin',
+      name: 'padding-margin',
+      render(): React.Node {
+        const styles = StyleSheet.create({
+          box: {
+            backgroundColor: '#527FE4',
+            borderColor: '#000033',
+            borderWidth: 1,
+          },
+        });
+        return (
+          <View
+            testID="view-test-padding-margin"
+            style={{borderColor: '#bb0000', borderWidth: 0.5}}>
+            <View style={[styles.box, {padding: 5}]}>
+              <RNTesterText style={{fontSize: 11}}>5px padding</RNTesterText>
+            </View>
+            <View style={[styles.box, {margin: 5}]}>
+              <RNTesterText style={{fontSize: 11}}>5px margin</RNTesterText>
+            </View>
+            <View
+              style={[
+                styles.box,
+                {margin: 5, padding: 5, alignSelf: 'flex-start'},
+              ]}>
+              <RNTesterText style={{fontSize: 11}}>
+                5px margin and padding,
+              </RNTesterText>
+              <RNTesterText style={{fontSize: 11}}>
+                widthAutonomous=true
+              </RNTesterText>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Border Radius',
+      name: 'border-radius',
+      render(): React.Node {
+        return (
+          <View testID="view-test-border-radius">
+            <View style={{borderWidth: 0.5, borderRadius: 5, padding: 5}}>
+              <RNTesterText style={{fontSize: 11}}>
+                Too much use of `borderRadius` (especially large radii) on
+                anything which is scrolling may result in dropped frames. Use
+                sparingly.
+              </RNTesterText>
+            </View>
+            {Platform.OS === 'ios' && (
+              <View
+                style={{
+                  borderRadius: 20,
+                  padding: 8,
+                  marginTop: 12,
+                  backgroundColor: '#527FE4',
+                  borderCurve: 'continuous',
+                }}>
+                <RNTesterText style={{fontSize: 16, color: 'white'}}>
+                  View with continuous border curve
+                </RNTesterText>
+              </View>
+            )}
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Border Style',
+      name: 'border-style',
+      render(): React.Node {
+        return <ViewBorderStyleExample />;
+      },
+    },
+    {
+      title: 'Rounded Borders',
+      name: 'rounded-borders',
+      render(): React.Node {
+        return (
+          <View
+            testID="view-test-rounded-borders"
+            style={{flexDirection: 'row', flexWrap: 'wrap'}}>
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: 25,
+                borderWidth: 1,
+                marginRight: 10,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: 25,
+                borderWidth: 10,
+                marginRight: 10,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderTopLeftRadius: 5,
+                borderTopRightRadius: 10,
+                borderBottomRightRadius: 25,
+                borderBottomLeftRadius: 50,
+                borderWidth: 1,
+                marginRight: 10,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderTopLeftRadius: 5,
+                borderTopRightRadius: 10,
+                borderBottomRightRadius: 25,
+                borderBottomLeftRadius: 50,
+                borderWidth: 10,
+                marginRight: 10,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderLeftWidth: 6,
+                borderTopWidth: 6,
+                borderTopLeftRadius: 20,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRightWidth: 6,
+                borderTopWidth: 6,
+                borderTopRightRadius: 20,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderBottomWidth: 6,
+                borderLeftWidth: 6,
+                borderBottomLeftRadius: 20,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderBottomWidth: 6,
+                borderRightWidth: 6,
+                borderBottomRightRadius: 20,
+              }}
+            />
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Rounded Borders (Percentages)',
+      name: 'rounded-borders-percentages',
+      render(): React.Node {
+        return (
+          <View
+            testID="view-test-rounded-borders-percentages"
+            style={{flexDirection: 'row', flexWrap: 'wrap'}}>
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: '50%',
+                borderWidth: 1,
+                marginRight: 10,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: '50%',
+                borderWidth: 10,
+                marginRight: 10,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderTopLeftRadius: '10%',
+                borderTopRightRadius: '20%',
+                borderBottomRightRadius: '50%',
+                borderBottomLeftRadius: '100%',
+                borderWidth: 1,
+                marginRight: 10,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderTopLeftRadius: '10%',
+                borderTopRightRadius: '20%',
+                borderBottomRightRadius: '50%',
+                borderBottomLeftRadius: '100%',
+                borderWidth: 10,
+                marginRight: 10,
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderLeftWidth: 6,
+                borderTopWidth: 6,
+                borderTopLeftRadius: '40%',
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRightWidth: 6,
+                borderTopWidth: 6,
+                borderTopRightRadius: '40%',
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderBottomWidth: 6,
+                borderLeftWidth: 6,
+                borderBottomLeftRadius: '40%',
+              }}
+            />
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderBottomWidth: 6,
+                borderRightWidth: 6,
+                borderBottomRightRadius: '40%',
+              }}
+            />
+            <View
+              style={{
+                width: 100,
+                height: 50,
+                borderWidth: 6,
+                borderRadius: '100%',
+              }}
+            />
+            <View
+              style={{
+                width: 100,
+                height: 50,
+                borderWidth: 6,
+                borderTopLeftRadius: '10%',
+                borderTopRightRadius: '20%',
+                borderBottomRightRadius: '50%',
+                borderBottomLeftRadius: '100%',
+              }}
+            />
+            <View
+              style={{
+                width: 100,
+                height: 50,
+                borderWidth: 6,
+                borderRadius: '0%',
+              }}
+            />
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Overflow',
+      name: 'overflow',
+      render(): React.Node {
+        const styles = StyleSheet.create({
+          container: {
+            borderWidth: StyleSheet.hairlineWidth,
+            height: 12,
+            marginBottom: 8,
+            marginEnd: 16,
+            width: 95,
+          },
+          content: {
+            height: 20,
+            width: 200,
+          },
+        });
+
+        // NOTE: The <View> that sets `overflow` should only have other layout
+        // styles so that we can accurately test view flattening optimizations.
+        return (
+          <View testID="view-test-overflow" style={{flexDirection: 'row'}}>
+            <View style={styles.container}>
+              <View style={[StyleSheet.absoluteFill]}>
+                <RNTesterText style={styles.content}>undefined</RNTesterText>
+              </View>
+            </View>
+            <View style={styles.container}>
+              <View style={[StyleSheet.absoluteFill, {overflow: 'hidden'}]}>
+                <RNTesterText style={styles.content}>hidden</RNTesterText>
+              </View>
+            </View>
+            <View style={styles.container}>
+              <View style={[StyleSheet.absoluteFill, {overflow: 'visible'}]}>
+                <RNTesterText style={styles.content}>visible</RNTesterText>
+              </View>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Opacity',
+      name: 'opacity',
+      render(): React.Node {
+        return (
+          <View testID="view-test-opacity">
+            <View style={{opacity: 0}}>
+              <RNTesterText>Opacity 0</RNTesterText>
+            </View>
+            <View style={{opacity: 0.1}}>
+              <RNTesterText>Opacity 0.1</RNTesterText>
+            </View>
+            <View style={{opacity: 0.3}}>
+              <RNTesterText>Opacity 0.3</RNTesterText>
+            </View>
+            <View style={{opacity: 0.5}}>
+              <RNTesterText>Opacity 0.5</RNTesterText>
+            </View>
+            <View style={{opacity: 0.7}}>
+              <RNTesterText>Opacity 0.7</RNTesterText>
+            </View>
+            <View style={{opacity: 0.9}}>
+              <RNTesterText>Opacity 0.9</RNTesterText>
+            </View>
+            <View style={{opacity: 1}}>
+              <RNTesterText>Opacity 1</RNTesterText>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Offscreen Alpha Compositing',
+      name: 'offscreen-alpha-compositing',
+      render(): React.Node {
+        return (
+          <OffscreenAlphaCompositing testID="view-test-offscreen-alpha-compositing" />
+        );
+      },
+    },
+    {
+      title: 'ZIndex',
+      name: 'z-index',
+      render(): React.Node {
+        return <ZIndexExample />;
+      },
+    },
+    {
+      title: 'ZIndex With Static',
+      name: 'zindex-with-static',
+      render: PositionStaticZIndexExample,
+    },
+    {
+      title: '`display: none` style',
+      name: 'display-none',
+      render(): React.Node {
+        return <DisplayNoneStyle />;
+      },
+    },
+    {
+      title: 'BackfaceVisibility',
+      name: 'backface-visibility',
+      render(): React.Node {
+        return (
+          <View testID="view-test-backface-visibility">
+            <RNTesterText style={{paddingBottom: 10}}>
+              View #1, front is visible, back is hidden.
+            </RNTesterText>
+            <View style={{justifyContent: 'center', alignItems: 'center'}}>
+              <View
+                style={{
+                  height: 150,
+                  width: 150,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'blue',
+                  backfaceVisibility: 'hidden',
+                }}>
+                <RNTesterText>Front</RNTesterText>
+              </View>
+              <View
+                style={{
+                  height: 150,
+                  width: 150,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'red',
+                  backfaceVisibility: 'hidden',
+                  transform: [{rotateY: '180deg'}],
+                  position: 'absolute',
+                  top: 0,
+                }}>
+                <RNTesterText>Back (You should not see this)</RNTesterText>
+              </View>
+            </View>
+            <RNTesterText style={{paddingVertical: 10}}>
+              View #2, front is hidden, back is visible.
+            </RNTesterText>
+            <View style={{justifyContent: 'center', alignItems: 'center'}}>
+              <View
+                style={{
+                  height: 150,
+                  width: 150,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'blue',
+                  backfaceVisibility: 'hidden',
+                }}>
+                <RNTesterText>Front (You should not see this)</RNTesterText>
+              </View>
+              <View
+                style={{
+                  height: 150,
+                  width: 150,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'red',
+                  backfaceVisibility: 'hidden',
+                  position: 'absolute',
+                  top: 0,
+                }}>
+                <RNTesterText>Back</RNTesterText>
+              </View>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'View with aria-label="label"',
+      name: 'aria-label',
+      render(): React.Node {
+        return (
+          <View
+            testID="view-test-aria-label"
+            aria-label="Blue background View with Text"
+            style={{backgroundColor: '#527FE4', padding: 5}}>
+            <RNTesterText style={{fontSize: 11}}>Blue background</RNTesterText>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'FlexGap',
+      name: 'flexgap',
+      render(): React.Node {
+        return <FlexGapExample testID="view-test-flexgap" />;
+      },
+    },
+    {
+      title: 'Insets',
+      name: 'insets',
+      render(): React.Node {
+        return (
+          <View testID="view-test-insets" style={{rowGap: 5}}>
+            <View style={{position: 'relative', height: 40, borderWidth: 1}}>
+              <View
+                style={{
+                  backgroundColor: '#527FE4',
+                  padding: 5,
+                  position: 'absolute',
+                  inset: 5,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>inset 5</RNTesterText>
+              </View>
+            </View>
+            <View style={{position: 'relative', height: 40, borderWidth: 1}}>
+              <View
+                style={{
+                  backgroundColor: '#527FE4',
+                  padding: 5,
+                  position: 'absolute',
+                  insetBlock: 5,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>insetBlock 5</RNTesterText>
+              </View>
+            </View>
+            <View style={{position: 'relative', height: 40, borderWidth: 1}}>
+              <View
+                style={{
+                  backgroundColor: '#527FE4',
+                  padding: 5,
+                  position: 'absolute',
+                  insetBlockEnd: 5,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>
+                  insetBlockEnd 5
+                </RNTesterText>
+              </View>
+            </View>
+            <View style={{position: 'relative', height: 40, borderWidth: 1}}>
+              <View
+                style={{
+                  backgroundColor: '#527FE4',
+                  padding: 5,
+                  position: 'absolute',
+                  insetBlockStart: 5,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>
+                  insetBlockStart 5
+                </RNTesterText>
+              </View>
+            </View>
+            <View style={{position: 'relative', height: 40, borderWidth: 1}}>
+              <View
+                style={{
+                  backgroundColor: '#527FE4',
+                  padding: 5,
+                  position: 'absolute',
+                  insetInline: 5,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>
+                  insetInline 5
+                </RNTesterText>
+              </View>
+            </View>
+            <View style={{position: 'relative', height: 40, borderWidth: 1}}>
+              <View
+                style={{
+                  backgroundColor: '#527FE4',
+                  padding: 5,
+                  position: 'absolute',
+                  insetInlineEnd: 5,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>
+                  insetInlineEnd 5
+                </RNTesterText>
+              </View>
+            </View>
+            <View style={{position: 'relative', height: 40, borderWidth: 1}}>
+              <View
+                style={{
+                  backgroundColor: '#527FE4',
+                  padding: 5,
+                  position: 'absolute',
+                  insetInlineStart: 5,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>
+                  insetInlineStart 5
+                </RNTesterText>
+              </View>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Logical Border Color',
+      name: 'logical-border-color',
+      render(): React.Node {
+        return (
+          <View testID="view-test-logical-border-color" style={{rowGap: 10}}>
+            <View style={{position: 'relative', height: 50, borderWidth: 1}}>
+              <View
+                style={{
+                  borderBlockColor: 'orange',
+                  borderWidth: 5,
+                  position: 'absolute',
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>
+                  borderBlockColor orange
+                </RNTesterText>
+              </View>
+            </View>
+            <View style={{position: 'relative', height: 65, borderWidth: 1}}>
+              <View
+                style={{
+                  borderBlockEndColor: 'green',
+                  borderBlockStartColor: 'purple',
+                  borderWidth: 5,
+                  position: 'absolute',
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10,
+                }}>
+                <RNTesterText style={{fontSize: 11}}>
+                  borderBlockStartColor purple
+                </RNTesterText>
+                <RNTesterText style={{fontSize: 11}}>
+                  borderBlockEndColor green
+                </RNTesterText>
+              </View>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      title: 'Box Shadow',
+      name: 'box-shadow',
+      render: BoxShadowExample,
+    },
+    {
+      title: 'Outline',
+      name: 'outline',
+      render: OutlineExample,
+    },
+    {
+      title: 'Box Sizing',
+      name: 'box-sizing',
+      render: BoxSizingExample,
+    },
+  ],
+}: RNTesterModule);
